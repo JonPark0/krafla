@@ -9,6 +9,7 @@ authors:
 repository-code: "https://github.com/JonPark0/krafla"
 url: "https://jonpark0.github.io/krafla/"
 license: MIT
+doi: 10.5281/zenodo.23880653
 version: 0.6.1
 date-released: "2026-11-02"
 abstract: >-

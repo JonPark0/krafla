@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Zenodo DOI `10.5281/zenodo.23880653` (all versions): a badge in the README, `doi` in
+  `CITATION.cff` and the BibTeX entries, and the site's structured data.
+
 ## 0.6.1 — 2026-11-02
 
 ### Changed

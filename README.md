@@ -4,6 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![C11](https://img.shields.io/badge/C-11-blue.svg)](docs/user-guide.md)
 [![Docs](https://img.shields.io/badge/docs-site-green.svg)](https://jonpark0.github.io/krafla/)
+[![DOI](https://zenodo.org/badge/1429643389.svg)](https://doi.org/10.5281/zenodo.23880653)
 
 **Krafla** (**K**ernels **R**etargeted **A**cross **F**amilies of **L**egacy
 **A**rchitectures; formerly isa-lm) is a dependency-free C11 inference runtime
@@ -152,9 +153,14 @@ If Krafla helps your research, please cite it (GitHub's *Cite this repository* u
   title   = {Krafla: a portable C11 runtime for INT8/INT4 Llama-style language model inference on legacy x86-64 and ARM instruction sets},
   year    = {2026},
   version = {0.6.1},
+  doi     = {10.5281/zenodo.23880653},
   url     = {https://github.com/JonPark0/krafla}
 }
 ```
+
+Every release is archived on [Zenodo](https://doi.org/10.5281/zenodo.23880653). The DOI
+`10.5281/zenodo.23880653` stands for all versions and resolves to the latest one; each
+release also has its own DOI, listed on the Zenodo page.
 
 Please also cite the models you run; their licenses are separate from this one.
 
