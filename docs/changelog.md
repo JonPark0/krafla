@@ -8,6 +8,19 @@ nav_title: "Changelog"
 
 # Changelog
 
+## 0.6.1 — 2026-11-02
+
+### Changed
+
+- Documentation: corrected statements that no longer matched the code or the
+  measurements (kernel count, prefill batch size, the importance-matrix file
+  header, the Q8_0/Q4_0 format table, mixed files for SmolLM2), model file
+  sizes labelled in MiB, decode speed against llama.cpp described as "at least
+  as fast" at every ISA level measured, plainer wording in English and Korean,
+  and ASCII characters in code spans.
+- Model cards written by `scripts/hf_publish.py` use the same wording.
+- First release archived on Zenodo, which gives it a DOI.
+
 ## 0.6.0 — 2026-11-01
 
 ### Changed
