@@ -31,7 +31,7 @@ jobs:
     outputs:
       models: ${{ steps.p.outputs.models }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - id: p
         env:
           MODELS: ${{ inputs.models }}
@@ -48,7 +48,7 @@ jobs:
       matrix:
         id: ${{ fromJSON(needs.plan.outputs.models) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install Python deps
         run: |
           .github/scripts/apt-install.sh python3-numpy

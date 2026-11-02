@@ -36,7 +36,7 @@ jobs:
     env:
       TAG: ${{ inputs.tag || github.ref_name }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.sha || inputs.tag || github.ref }}
       - name: Release notes from CHANGELOG.md
@@ -48,7 +48,7 @@ jobs:
           test -s notes.md || { echo "CHANGELOG.md has no section for $v"; exit 1; }
           printf '\n### Downloads\n\nPick the archive for your platform and run `./ml_run` (or `ml_run.cmd` on Windows): it starts the fastest build your CPU supports. Checksums are in `SHA256SUMS`.\n' >> notes.md
       - name: Cache apt packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/apt-cache
           key: apt-${{ runner.os }}-${{ runner.arch }}-release-${{ hashFiles('.github/workflows/release.yml', '.github/scripts/apt-install.sh') }}
@@ -68,7 +68,7 @@ jobs:
           make -s ISA=scalar build/scalar/ml_run build/models/rand_q8.mlb
           scripts/smoke_release.sh
       - name: Publish
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.TAG }}
           target_commitish: ${{ inputs.sha || github.sha }}

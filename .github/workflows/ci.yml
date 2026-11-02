@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Release version check
         # a new ML_VERSION needs its CHANGELOG.md section (auto-release.yml)
         run: scripts/release_check.sh
@@ -25,7 +25,7 @@ jobs:
         # docs/assets/decode-ratio.svg follows docs/benchmarks.md (scripts/sync_docs.py)
         run: python3 scripts/sync_docs.py --check
       - name: Cache apt packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/apt-cache
           key: apt-${{ runner.os }}-${{ runner.arch }}-matrix-${{ hashFiles('.github/workflows/ci.yml', '.github/scripts/apt-install.sh') }}
@@ -59,7 +59,7 @@ jobs:
             grep -v -E "^make: |passed$" | head -n 9 | while IFS= read -r line; do echo "::error title=test-all::$line"; done
       - name: Upload logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: test-all-logs
           path: build/test-all/
@@ -69,9 +69,9 @@ jobs:
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Cache apt packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/apt-cache
           key: apt-${{ runner.os }}-${{ runner.arch }}-arm64-${{ hashFiles('.github/workflows/ci.yml', '.github/scripts/apt-install.sh') }}
@@ -128,7 +128,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install numpy
         run: python -m pip install numpy
       - name: Build and unit tests (CMake, MSVC)
