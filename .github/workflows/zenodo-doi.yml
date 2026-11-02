@@ -1,0 +1,61 @@
+name: Zenodo DOI
+
+# Zenodo's GitHub integration archives each published release and mints a DOI
+# for it a few minutes later. This workflow waits for that record (Zenodo's
+# public API, no token; .github/scripts/zenodo_doi.py) and adds the release's
+# DOI and the concept DOI from CITATION.cff to the release notes. release.yml
+# calls it after publishing; run it by hand to add the DOI to an older release.
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "Release tag, vX.Y.Z"
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, e.g. v0.6.1"
+        required: true
+
+permissions:
+  contents: write   # to edit the release notes
+
+jobs:
+  doi:
+    name: Add the DOI to the release notes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      TAG: ${{ inputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      # the default branch's CITATION.cff, which holds the concept DOI even for
+      # releases tagged before it was added
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - name: Wait for the Zenodo record
+        id: z
+        run: |
+          if python3 .github/scripts/zenodo_doi.py "$TAG" --timeout 1800 > doi.json; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            cat doi.json
+          else
+            echo "::warning title=zenodo::no Zenodo record for $TAG after 30 minutes; run this workflow again later"
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Add it to the release notes
+        if: steps.z.outputs.found == 'true'
+        run: |
+          doi=$(python3 -c "import json; print(json.load(open('doi.json'))['doi'])")
+          concept=$(python3 -c "import json; print(json.load(open('doi.json'))['concept_doi'])")
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body > notes.md
+          if grep -q "doi.org/$doi" notes.md; then
+            echo "the notes already have $doi"
+            exit 0
+          fi
+          printf '\n## Citation\n\nDOI of this release: [%s](https://doi.org/%s). All versions: [%s](https://doi.org/%s).\n' \
+            "$doi" "$doi" "$concept" "$concept" >> notes.md
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file notes.md
+          echo "::notice title=zenodo::$TAG: $doi"

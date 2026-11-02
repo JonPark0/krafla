@@ -4,7 +4,8 @@ name: Release
 # GitHub release vX.Y.Z (ML_VERSION in core/ml.h) with the notes from
 # CHANGELOG.md. Started by auto-release.yml when main gets a new ML_VERSION
 # (the tag is created at publishing, on that commit), by pushing a tag vX.Y.Z,
-# or by hand (workflow_dispatch) to rebuild an existing tag.
+# or by hand (workflow_dispatch) to rebuild an existing tag. After publishing,
+# zenodo-doi.yml adds the release's Zenodo DOI to its notes.
 on:
   push:
     tags: ["v*"]
@@ -74,3 +75,10 @@ jobs:
           name: Krafla ${{ env.TAG }}
           body_path: notes.md
           files: dist/*
+
+  doi:
+    name: Zenodo DOI
+    needs: release
+    uses: ./.github/workflows/zenodo-doi.yml
+    with:
+      tag: ${{ inputs.tag || github.ref_name }}
