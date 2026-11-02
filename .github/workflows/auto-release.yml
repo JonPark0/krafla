@@ -20,7 +20,7 @@ jobs:
       tag: ${{ steps.v.outputs.tag }}
       release: ${{ steps.v.outputs.release }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - id: v
         run: scripts/release_check.sh | tee -a "$GITHUB_OUTPUT"
 

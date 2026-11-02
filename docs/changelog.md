@@ -18,6 +18,13 @@ nav_title: "Changelog"
   waits for Zenodo to archive the release and adds its DOI to the release
   notes, through Zenodo's public API (`.github/scripts/zenodo_doi.py`).
 
+### Changed
+
+- Workflows use the Node 24 versions of their actions (`actions/checkout@v5`,
+  `actions/cache@v5`, `actions/upload-artifact@v6`,
+  `softprops/action-gh-release@v3`); GitHub has deprecated Node 20 on its
+  runners.
+
 ## 0.6.1 — 2026-11-02
 
 ### Changed
