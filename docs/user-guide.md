@@ -48,7 +48,11 @@ into main that raises `ML_VERSION` in `core/ml.h` to X.Y.Z and renames
 `release.yml` builds and runs the archives, publishes release vX.Y.Z and
 creates the tag on that commit. Pushing a tag vX.Y.Z also still works. CI
 fails a pull request that raises `ML_VERSION` without adding its CHANGELOG
-section.
+section. Zenodo archives each published release and gives it a DOI; the
+concept DOI `10.5281/zenodo.23880653` resolves to the latest one. Once
+Zenodo has minted the release's own DOI, `.github/workflows/zenodo-doi.yml`
+adds it to the release notes (it reads Zenodo's public API, so it needs no
+token; run it by hand for an older release).
 
 Converted models are published on Hugging Face by
 `.github/workflows/hf-models.yml`, which is run by hand. For each model in
