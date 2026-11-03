@@ -140,10 +140,10 @@ build/models/nope_q4.mlb: tools/gen_random.py tools/mlb.py
 HYB := --layers 4 --linear-every 2 --attn-gate --qk-norm
 build/models/hyb_q8.mlb: tools/gen_random.py tools/mlb.py
 	@mkdir -p $(dir $@)
-	@$(PYTHON) tools/gen_random.py --out $@ --wtype q8 $(HYB) --rot-dim 8 --seed 9
+	@$(PYTHON) tools/gen_random.py --out $@ --wtype q8 $(HYB) --rot-dim 8 --seed 23
 build/models/hyb_q4.mlb: tools/gen_random.py tools/mlb.py
 	@mkdir -p $(dir $@)
-	@$(PYTHON) tools/gen_random.py --out $@ --wtype q4 $(HYB) --rot-dim 8 --scales f16 --seed 9
+	@$(PYTHON) tools/gen_random.py --out $@ --wtype q4 $(HYB) --rot-dim 8 --scales f16 --seed 23
 build/models/hybl_q4.mlb: tools/gen_random.py tools/mlb.py
 	@mkdir -p $(dir $@)
 	@$(PYTHON) tools/gen_random.py --out $@ --wtype q4 $(HYB) --rot-dim 16 --dim 128 --heads 4 --kv-heads 2 \
