@@ -208,6 +208,30 @@ type, which Krafla can do with `--q8 cls`. Neither row uses an importance
 matrix; with one collected on the wikitext-2 training set, Krafla's Q4_0
 scores 14.52 ([importance matrix](user-guide.md#q8-q4-or-mixed)).
 
+### Qwen3.5 0.8B (linear attention)
+
+Qwen3.5 0.8B, on the AVX-512 VNNI machine with 4 threads, against ggml-org's
+GGUF files of the same model and llama.cpp from October 2026. Perplexity on
+the first 4 chunks of 512 tokens of wikitext-2 (`tools/perplexity.py
+--llama-cpp`), speed from `ml_bench -n 128` and `llama-bench -p 128 -n 128`:
+
+| Runtime | Weights | Size | Perplexity | Prefill | Decode |
+|---------|---------|-----:|-----------:|--------:|-------:|
+| llama.cpp | BF16 | 1486 MiB | 15.74 | | |
+| llama.cpp | Q8_0 | 795 MiB | 15.79 | 304 tok/s | 39.0 tok/s |
+| Krafla | Q8_0 | 764 MiB | 15.80 | 471 tok/s | 49.8 tok/s |
+| llama.cpp | Q4_0 | 537 MiB | 18.95 | 275 tok/s | 47.3 tok/s |
+| Krafla | Q4_0 | 406 MiB | 18.41 | 541 tok/s | 80.0 tok/s |
+| Krafla | Q4_0, `v,o,down` in Q8_0 | 491 MiB | 16.63 | | |
+
+Qwen3.5 4B, whose value heads share key heads two by two, against unsloth's
+Q8_0 GGUF (64 prompt and 64 decoded tokens):
+
+| Runtime | Weights | Perplexity | Prefill | Decode |
+|---------|---------|-----------:|--------:|-------:|
+| llama.cpp | Q8_0 | 8.15 | 58 tok/s | 9.0 tok/s |
+| Krafla | Q8_0 | 8.18 | 100 tok/s | 9.8 tok/s |
+
 ## Reproducing
 
 ```sh

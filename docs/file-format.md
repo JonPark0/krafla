@@ -50,7 +50,14 @@ straight into it without copying. Everything is little-endian.
 | 120 | `u32` | `scale_f16` | 0 or 1: every quantized matrix stores its scales `d` as IEEE `f16` instead of `f32` |
 | 124 | `f32` | `attn_softcap` | ≥ 0: attention scores become `cap · tanh(score / cap)` before the softmax; 0 means none (Gemma 2) |
 | 128 | `f32` | `final_softcap` | ≥ 0: the same on the logits; 0 means none (Gemma 2) |
-| 132 | | padding | zero up to offset 256 |
+| 132 | `u32` | `rot_dim` | even, at most `head_dim`: RoPE rotates the first `rot_dim` dimensions of each head; 0 means all (Qwen3.5: a quarter) |
+| 136 | `u32` | `attn_gate` | 0 or 1: attention layers store `wg`; their output is multiplied by `sigmoid(wg · x)` before `wo` (Qwen3.5) |
+| 140 | `u32` | `lin_k_heads` | linear attention (below): key heads; 0 when the model has none |
+| 144 | `u32` | `lin_v_heads` | value heads: a multiple of `lin_k_heads` and of 4 |
+| 148 | `u32` | `lin_k_dim` | size of a key head |
+| 152 | `u32` | `lin_v_dim` | size of a value head; `lin_v_heads × lin_v_dim` is a multiple of 32 |
+| 156 | `u32` | `lin_conv` | kernel size of the causal convolution |
+| 160 | | padding | zero up to offset 256 |
 
 `dim`, `n_layers`, `n_heads`, `n_kv_heads` and `hidden_dim` are limited to
 65536. `vocab` and `max_seq` are limited to 2^24.
@@ -59,14 +66,16 @@ Files written before a field existed have zeros there, and zero keeps the
 earlier behavior. Zeros at offsets 52–71 (RoPE scaling) mean plain RoPE. A zero
 `q8_mask` (offset 72, mixed models) stores no matrix as Q8_0. A zero at offset
 76 means no biases. Zeros at offsets 80–95 mean `head_dim = dim / n_heads`, no
-q/k norm and full attention.
+q/k norm and full attention. Zeros at offsets 132–159 mean RoPE on every
+dimension, no attention gate and no linear attention.
 
 Derived values: `head_dim` (offset 80, or `dim / n_heads` when 0),
 `q_dim = head_dim × n_heads` (a multiple of 32) and
 `kv_dim = head_dim × n_kv_heads`.
 
 `q8_mask` bits, one per matrix class: 1 `tok_emb`, 2 `wcls`, 4 `wq` and
-`wk`, 8 `wv`, 16 `wo`, 32 `w1` and `w3`, 64 `w2`. With a shared classifier,
+`wk` (also `wg` and `lqkv`), 8 `wv` (also `lz`), 16 `wo` (also `lout`), 32 `w1`
+and `w3`, 64 `w2`. With a shared classifier,
 `tok_emb` is Q8_0 if bit 1 or 2 is set.
 
 With `qkv_bias` set, each layer stores `bq`, `bk` and `bv` after `wo`; they
@@ -78,9 +87,32 @@ With `layer_flags` set, `n_layers` bytes (padded to 64 like every array) come
 first in the body, one per layer. Bit 0 puts the layer behind the sliding
 window; bit 1 makes it use `rope_local_theta` instead of `rope_theta` and its
 scaling; bit 2 leaves the layer's queries and keys unrotated (no RoPE, as in
-SmolLM3), and cannot be combined with bit 1; other bits must be 0. Without
-layer flags, the window (if any) applies to every layer. Bit 2 needs Krafla
-0.8.0 or later; older versions refuse such files.
+SmolLM3), and cannot be combined with bit 1; bit 3 makes it a linear-attention
+layer (below), alone; other bits must be 0. Without layer flags, the window (if
+any) applies to every layer. Bit 2 needs Krafla 0.8.0 or later and bit 3,
+like offsets 132–159, 0.9.0 or later; older versions refuse such files.
+
+### Linear attention
+
+A layer with bit 3 replaces attention with the gated delta rule of Qwen3.5.
+With `K = lin_k_heads`, `V = lin_v_heads`, `dk = lin_k_dim`,
+`dv = lin_v_dim`, the layer projects its normalized input into
+`2·K·dk + V·dv` channels (queries, keys, values), `V·dv` gate values `z`, and
+`V` values each of `b` and `a`. For each position, in order:
+
+1. Each channel passes through a causal convolution of `lin_conv` taps over
+   the channel's last inputs (`lconv`), then SiLU.
+2. Each query and key head is divided by its L2 norm (`ε = 1e-6`); queries
+   are also divided by `sqrt(dk)`. Value head `h` uses query and key head
+   `h / (V / K)`.
+3. `β = sigmoid(b)`, `g = −exp(A_log) · softplus(a + dt_bias)`.
+4. The value head's state `S` (`dk × dv`, zero at position 0) becomes
+   `S·exp(g)`, then `S + k (β (v − Sᵀk))ᵀ`; the head's output is `Sᵀq`.
+5. The output is RMS-normalized per head with `lnorm` and `norm_eps`, times
+   `silu(z)`, and goes through `lout`.
+
+The state replaces the KV cache: such a layer has no KV cache, and its memory
+does not grow with the context.
 
 ## Body
 
@@ -95,6 +127,7 @@ for each layer:
   wk                        kv_dim × dim        (wtype)
   wv                        kv_dim × dim        (wtype)
   wo                        dim × q_dim         (wtype)
+  wg                        q_dim × dim         (wtype, class of wq; only if attn_gate)
   bq, bk, bv                q_dim, kv_dim, kv_dim (F32; only if qkv_bias)
   q_norm, k_norm            head_dim, head_dim  (F32; only if qk_norm)
   ffn_norm                  dim                 (F32)
@@ -105,6 +138,21 @@ for each layer:
 final_norm                  dim                 (F32)
 wcls                        vocab × dim         (wtype; omitted if shared_classifier)
 ```
+
+A linear-attention layer (bit 3) stores, in place of `wq` to `q_norm`, `k_norm`:
+
+```
+  attn_norm                 dim                 (F32)
+  lqkv                      (2·K·dk + V·dv) × dim   (wtype, class of wq)
+  lz                        V·dv × dim          (wtype, class of wv)
+  lb, la                    V × dim, V × dim    (always Q8_0)
+  lconv                     (2·K·dk + V·dv) × lin_conv  (F32)
+  dt_bias, A_log            V, V                (F32)
+  lnorm                     dv                  (F32)
+  lout                      dim × V·dv          (wtype, class of wo)
+```
+
+followed by `ffn_norm` and the FFN as in any layer.
 
 Matrices are stored row by row, one row per output: `y[r] = Σ_c W[r][c] · x[c]`.
 

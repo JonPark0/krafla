@@ -74,6 +74,9 @@ ml_status srv_generate(srv_engine *e, const int *prompt, int np, const srv_reque
     /* reuse the cached prefix; the last prompt token always runs, for its logits */
     int k = 0;
     while (k < e->ncached && k < np - 1 && e->cached[k] == prompt[k]) k++;
+    /* linear attention (Qwen3.5) keeps states, not a history of positions:
+     * they can be continued, but not cut back to a shorter prefix */
+    if (s->m->cfg.n_linear && k < e->ncached) k = 0;
     res->cached_tokens = k;
     e->ncached = k;
     double t0 = ml_now();

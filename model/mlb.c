@@ -41,17 +41,22 @@ static ml_qtensor take_mat(cursor *c, int rows, int cols, int type, int f16) {
  * one buffer, the embedding table's always, the others' when all is set or
  * they have no packed copy (the rest get d = NULL). The classifier shares
  * the table's when it is the table. */
+int ml_layer_mats(ml_layer *L, ml_qtensor **out) {
+    ml_qtensor *all[] = { &L->wq, &L->wk, &L->wv, &L->wo, &L->wg, &L->lqkv, &L->lz, &L->lb, &L->la, &L->lout,
+                          &L->w1, &L->w2, &L->w3 };
+    int n = 0;
+    for (size_t i = 0; i < sizeof all / sizeof all[0]; i++)
+        if (all[i]->rows > 0) out[n++] = all[i];
+    return n;
+}
+
 static ml_status expand_scales(ml_model *m, int all) {
     const int nl = m->cfg.n_layers, shared = m->wcls.dh == m->tok_emb.dh;
-    ml_qtensor **ws = malloc(sizeof(ml_qtensor *) * ((size_t)nl * 7 + 2));
+    ml_qtensor **ws = malloc(sizeof(ml_qtensor *) * ((size_t)nl * ML_LAYER_MATS + 2));
     if (!ws) return ML_E_NOMEM;
     int n = 0;
     ws[n++] = &m->tok_emb;
-    for (int l = 0; l < nl; l++) {
-        ml_layer *L = &m->layers[l];
-        ml_qtensor *lw[7] = { &L->wq, &L->wk, &L->wv, &L->wo, &L->w1, &L->w2, &L->w3 };
-        for (int k = 0; k < 7; k++) ws[n++] = lw[k];
-    }
+    for (int l = 0; l < nl; l++) n += ml_layer_mats(&m->layers[l], ws + n);
     if (!shared) ws[n++] = &m->wcls;
     size_t total = 0;
     for (int i = 0; i < n; i++)
@@ -132,6 +137,25 @@ static ml_status parse_header(ml_config *cfg, int *shared, const uint8_t *h) {
     if (!(cfg->attn_softcap >= 0.0f && cfg->attn_softcap < 1e6f) || !(cfg->final_softcap >= 0.0f && cfg->final_softcap < 1e6f))
         return ML_E_FORMAT;
     if (!(cfg->rope_theta > 0.0f) || !(cfg->norm_eps >= 0.0f)) return ML_E_FORMAT;
+    const uint32_t rot = rd32(h + 132), gate = rd32(h + 136);
+    if (rot % 2 || rot > (uint32_t)cfg->head_dim || gate > 1) return ML_E_FORMAT;
+    cfg->rot_dim = rot ? (int)rot : cfg->head_dim;
+    cfg->attn_gate = (int)gate;
+    uint32_t lin[5];
+    for (int i = 0; i < 5; i++) lin[i] = rd32(h + 140 + 4 * i);
+    for (int i = 0; i < 5; i++) if (lin[i] > 65536) return ML_E_SHAPE;
+    cfg->lin_nk = (int)lin[0]; cfg->lin_nv = (int)lin[1]; cfg->lin_dk = (int)lin[2];
+    cfg->lin_dv = (int)lin[3]; cfg->lin_conv = (int)lin[4];
+    if (cfg->lin_nk) {   /* all set, value heads a multiple of key heads (and of 4 rows), widths of whole blocks */
+        if (!cfg->lin_nv || !cfg->lin_dk || !cfg->lin_dv || !cfg->lin_conv || cfg->lin_nv % cfg->lin_nk ||
+            cfg->lin_nv % 4 || (uint64_t)cfg->lin_nv * (uint64_t)cfg->lin_dv > MAX_DIM ||
+            (uint64_t)cfg->lin_nk * (uint64_t)cfg->lin_dk > MAX_DIM || (cfg->lin_nv * cfg->lin_dv) % QK)
+            return ML_E_SHAPE;
+        cfg->lin_vdim = cfg->lin_nv * cfg->lin_dv;
+        cfg->lin_channels = 2 * cfg->lin_nk * cfg->lin_dk + cfg->lin_vdim;
+    } else if (lin[1] || lin[2] || lin[3] || lin[4]) {
+        return ML_E_FORMAT;
+    }
     cfg->rope_type = (int)rd32(h + 52);
     cfg->rope_factor = rdf(h + 56);
     cfg->rope_low_freq_factor = rdf(h + 60);
@@ -178,21 +202,38 @@ ml_status ml_model_load(ml_model *m, const char *path) {
     const uint8_t *lf = c->layer_flags ? take(&cur, (size_t)c->n_layers) : NULL;
     for (int l = 0; lf && cur.ok && l < c->n_layers; l++)
         if ((lf[l] & ~ML_LAYER_ALL) || ((lf[l] & ML_LAYER_LOCAL_ROPE) && !(c->rope_local_theta > 0.0f)) ||
-            ((lf[l] & ML_LAYER_LOCAL_ROPE) && (lf[l] & ML_LAYER_NO_ROPE))) {
+            ((lf[l] & ML_LAYER_LOCAL_ROPE) && (lf[l] & ML_LAYER_NO_ROPE)) ||
+            ((lf[l] & ML_LAYER_LINEAR) && ((lf[l] & ~ML_LAYER_LINEAR) || !c->lin_nk))) {
             ml_model_free(m);
             return ML_E_FORMAT;
         }
+    for (int l = 0; lf && l < c->n_layers; l++) m->cfg.n_linear += (lf[l] & ML_LAYER_LINEAR) != 0;
     m->tok_emb = take_mat(&cur, c->vocab, c->dim, WT(ML_Q8M_EMB | (shared ? ML_Q8M_CLS : 0)), c->scale_f16);
     for (int l = 0; l < c->n_layers; l++) {
         ml_layer *L = &m->layers[l];
         L->window = !lf || (lf[l] & ML_LAYER_SLIDING) ? c->sliding_window : 0;
         L->local_rope = lf && (lf[l] & ML_LAYER_LOCAL_ROPE);
         L->no_rope = lf && (lf[l] & ML_LAYER_NO_ROPE);
+        L->linear = lf && (lf[l] & ML_LAYER_LINEAR);
         L->attn_norm = take(&cur, normsz);
+        if (L->linear) {
+            const size_t f = sizeof(float), ch = (size_t)c->lin_channels, nv = (size_t)c->lin_nv;
+            L->lqkv = take_mat(&cur, c->lin_channels, c->dim, WT(ML_Q8M_QK), c->scale_f16);
+            L->lz = take_mat(&cur, c->lin_vdim, c->dim, WT(ML_Q8M_V), c->scale_f16);
+            L->lb = take_mat(&cur, c->lin_nv, c->dim, ML_Q8_0, c->scale_f16);
+            L->la = take_mat(&cur, c->lin_nv, c->dim, ML_Q8_0, c->scale_f16);
+            L->lconv = take(&cur, ch * (size_t)c->lin_conv * f);
+            L->ldt = take(&cur, nv * f);
+            L->lalog = take(&cur, nv * f);
+            L->lnorm = take(&cur, (size_t)c->lin_dv * f);
+            L->lout = take_mat(&cur, c->dim, c->lin_vdim, WT(ML_Q8M_O), c->scale_f16);
+            goto ffn;
+        }
         L->wq = take_mat(&cur, c->q_dim, c->dim, WT(ML_Q8M_QK), c->scale_f16);
         L->wk = take_mat(&cur, c->kv_dim, c->dim, WT(ML_Q8M_QK), c->scale_f16);
         L->wv = take_mat(&cur, c->kv_dim, c->dim, WT(ML_Q8M_V), c->scale_f16);
         L->wo = take_mat(&cur, c->dim, c->q_dim, WT(ML_Q8M_O), c->scale_f16);
+        if (c->attn_gate) L->wg = take_mat(&cur, c->q_dim, c->dim, WT(ML_Q8M_QK), c->scale_f16);
         if (c->qkv_bias) {
             L->bq = take(&cur, (size_t)c->q_dim * sizeof(float));
             L->bk = take(&cur, (size_t)c->kv_dim * sizeof(float));
@@ -202,6 +243,7 @@ ml_status ml_model_load(ml_model *m, const char *path) {
             L->q_norm = take(&cur, (size_t)c->head_dim * sizeof(float));
             L->k_norm = take(&cur, (size_t)c->head_dim * sizeof(float));
         }
+    ffn:
         L->ffn_norm = take(&cur, normsz);
         L->w1 = take_mat(&cur, c->hidden_dim, c->dim, WT(ML_Q8M_UP), c->scale_f16);
         L->w2 = take_mat(&cur, c->dim, c->hidden_dim, WT(ML_Q8M_DOWN), c->scale_f16);

@@ -74,11 +74,68 @@ def rope_tables(cfg, local=False):
     return (np.cos(ang) * af).astype(np.float32), (np.sin(ang) * af).astype(np.float32)
 
 
-def rope(v, c, s, hd):
-    v = v.reshape(-1, hd // 2, 2).astype(np.float64)
-    a, b = v[..., 0], v[..., 1]
-    out = np.stack([a * c - b * s, a * s + b * c], axis=-1)
-    return out.reshape(-1).astype(np.float32)
+def rope(v, c, s, hd, rd=None):
+    """Rotates pairs (2i, 2i+1) of the first rd (default hd) dimensions of each head."""
+    rd = rd or hd
+    v = np.asarray(v, np.float32).reshape(-1, hd).copy()
+    r = v[:, :rd].reshape(-1, rd // 2, 2).astype(np.float64)
+    a, b = r[..., 0], r[..., 1]
+    v[:, :rd] = np.stack([a * c - b * s, a * s + b * c], axis=-1).reshape(-1, rd).astype(np.float32)
+    return v.reshape(-1)
+
+
+def sigmoid(x):
+    return 1.0 / (1.0 + np.exp(-np.asarray(x, np.float64)))
+
+
+def silu(x):
+    x = np.asarray(x, np.float64)
+    return x * sigmoid(x)
+
+
+def linear_attention(m, cfg, L, h, st):
+    """One position of a gated-delta-rule layer (Qwen3.5): h is the normalized
+    input; st holds the layer's conv window and recurrent state, updated."""
+    nk, nv, dk, dv, kc, conv, vw = mlb.lin_dims(cfg)
+    eps = float(cfg["norm_eps"])
+    qkv = m.matvec(L["lqkv"], h)
+    z = m.matvec(L["lz"], h).astype(np.float64)
+    b = m.matvec(L["lb"], h)
+    a = m.matvec(L["la"], h)
+    win = np.concatenate([st["conv"], qkv.astype(np.float64)[:, None]], axis=1)   # [conv, kc]
+    st["conv"] = win[:, 1:]
+    co = silu((win * np.asarray(L["lconv"], np.float64)).sum(axis=1))
+    q, k, v = co[:nk * dk].reshape(nk, dk), co[nk * dk:2 * nk * dk].reshape(nk, dk), co[2 * nk * dk:].reshape(nv, dv)
+    beta = sigmoid(b)
+    g = -np.exp(np.asarray(L["lalog"], np.float64)) * np.logaddexp(0.0, a.astype(np.float64) + L["ldt"])
+    o = np.zeros(vw, np.float32)
+    for hh in range(nv):
+        kh = hh // (nv // nk)
+        qn = q[kh] / np.sqrt((q[kh] * q[kh]).sum() + 1e-6) / np.sqrt(dk)
+        kn = k[kh] / np.sqrt((k[kh] * k[kh]).sum() + 1e-6)
+        S = st["S"][hh] * np.exp(g[hh])
+        delta = (v[hh] - kn @ S) * beta[hh]
+        S = S + np.outer(kn, delta)
+        st["S"][hh] = S
+        out = qn @ S
+        zz = z[hh * dv:(hh + 1) * dv]
+        o[hh * dv:(hh + 1) * dv] = (L["lnorm"] * (out / np.sqrt(np.mean(out * out) + eps)) * silu(zz)).astype(np.float32)
+    return m.matvec(L["lout"], o)
+
+
+def ffn_block(m, cfg, L, x, eps, gelu):
+    """x after the attention residual -> x after the FFN residual."""
+    h = rmsnorm(x, L["ffn_norm"], eps)
+    g = m.matvec(L["w1"], h).astype(np.float64)
+    u = m.matvec(L["w3"], h).astype(np.float64)
+    if gelu:   # tanh approximation (gelu_pytorch_tanh)
+        g = (0.5 * g * (1.0 + np.tanh(0.7978845608028654 * (g + 0.044715 * g * g * g))) * u).astype(np.float32)
+    else:
+        g = (g / (1.0 + np.exp(-g)) * u).astype(np.float32)
+    f = m.matvec(L["w2"], g)
+    if "post_ffn_norm" in L:
+        f = rmsnorm(f, L["post_ffn_norm"], eps)
+    return (x + f).astype(np.float32)
 
 
 def forward(cfg, t, tokens, kv="f32"):
@@ -92,6 +149,10 @@ def forward(cfg, t, tokens, kv="f32"):
     local = rope_tables(cfg, True) if cfg.get("rope_local_theta") else None
     group = nh // nkv
     cos_t, sin_t = rope_tables(cfg)
+    rd = mlb.rot_dim(cfg)
+    nk, nv, dk, dv, kc, conv, vw = mlb.lin_dims(cfg)
+    lin = [{"conv": np.zeros((conv, kc - 1)), "S": np.zeros((nv, dk, dv))} if mlb.layer_linear(cfg, li) else None
+           for li in range(cfg["n_layers"])]
     emb = mlb.dequant(t["tok_emb"])
     escale = np.float32(cfg.get("embed_scale") or 1.0)
     ascale = float(cfg.get("attn_scale") or 0.0) or 1.0 / np.sqrt(hd)
@@ -106,6 +167,12 @@ def forward(cfg, t, tokens, kv="f32"):
             win = mlb.layer_window(cfg, li)
             ct, st = local if mlb.layer_local_rope(cfg, li) else (cos_t, sin_t)
             h = rmsnorm(x, L["attn_norm"], eps)
+            if lin[li] is not None:
+                a = linear_attention(m, cfg, L, h, lin[li])
+                if "post_attn_norm" in L:
+                    a = rmsnorm(a, L["post_attn_norm"], eps)
+                x = ffn_block(m, cfg, L, (x + a).astype(np.float32), eps, gelu)
+                continue
             q = m.matvec(L["wq"], h)
             k = m.matvec(L["wk"], h)
             v = m.matvec(L["wv"], h)
@@ -115,8 +182,8 @@ def forward(cfg, t, tokens, kv="f32"):
                 q = np.concatenate([rmsnorm(q[i:i + hd], L["q_norm"], eps) for i in range(0, len(q), hd)])
                 k = np.concatenate([rmsnorm(k[i:i + hd], L["k_norm"], eps) for i in range(0, len(k), hd)])
             if not mlb.layer_no_rope(cfg, li):
-                q = rope(q, ct[pos], st[pos], hd)
-                k = rope(k, ct[pos], st[pos], hd)
+                q = rope(q, ct[pos], st[pos], hd, rd)
+                k = rope(k, ct[pos], st[pos], hd, rd)
             if kv == "f16":
                 k = np.asarray(k, np.float32).astype(np.float16).astype(np.float64)
                 v = np.asarray(v, np.float32).astype(np.float16).astype(np.float64)
@@ -141,21 +208,12 @@ def forward(cfg, t, tokens, kv="f32"):
                     sc = acap * np.tanh(sc / acap)
                 p = softmax(sc)
                 o[hh * hd:(hh + 1) * hd] = p @ V[:, kh * hd:(kh + 1) * hd]
+            if "wg" in L:   # Qwen3.5: the output gated by sigmoid of a projection of the input
+                o = (o * sigmoid(m.matvec(L["wg"], h))).astype(np.float32)
             a = m.matvec(L["wo"], o)
             if "post_attn_norm" in L:   # Gemma 3: the block's output is normalized before the residual
                 a = rmsnorm(a, L["post_attn_norm"], eps)
-            x = (x + a).astype(np.float32)
-            h = rmsnorm(x, L["ffn_norm"], eps)
-            g = m.matvec(L["w1"], h).astype(np.float64)
-            u = m.matvec(L["w3"], h).astype(np.float64)
-            if gelu:   # tanh approximation (gelu_pytorch_tanh)
-                g = (0.5 * g * (1.0 + np.tanh(0.7978845608028654 * (g + 0.044715 * g * g * g))) * u).astype(np.float32)
-            else:
-                g = (g / (1.0 + np.exp(-g)) * u).astype(np.float32)
-            f = m.matvec(L["w2"], g)
-            if "post_ffn_norm" in L:
-                f = rmsnorm(f, L["post_ffn_norm"], eps)
-            x = (x + f).astype(np.float32)
+            x = ffn_block(m, cfg, L, (x + a).astype(np.float32), eps, gelu)
         lg = m.matvec(t["wcls"], rmsnorm(x, t["final_norm"], eps))
         if fcap:   # Gemma 2: logits soft-capped at fcap
             lg = (fcap * np.tanh(lg.astype(np.float64) / fcap)).astype(np.float32)

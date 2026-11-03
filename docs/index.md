@@ -37,7 +37,7 @@ operator is bound to the best kernel for it, with no runtime dispatch.
   an F32 reference.
 - **Deterministic:** output is bit-identical for any thread count and prompt
   batch size.
-- **Models:** Llama 2/3, Mistral, Qwen2.5, Qwen3, SmolLM2, SmolLM3, Gemma 2 and Gemma 3
+- **Models:** Llama 2/3, Mistral, Qwen2.5, Qwen3, Qwen3.5/3.6, SmolLM2, SmolLM3, Gemma 2 and Gemma 3
   from Hugging Face safetensors, with their tokenizers and chat templates.
 - **OpenAI-compatible server:** `ml_server` serves a model to the `openai`
   client libraries and other tools that take a base URL ([Server](server.md)).
@@ -112,8 +112,9 @@ every option; the [FAQ](faq.md) answers the common questions.
 - **Speed:** row-interleaved weight packing for each ISA's integer dot products, batched prompt prefill,
   software prefetch, blocked GQA attention, a thread pool with bit-identical results, a pack cache for fast start-up
 - **Models:** llama2.c checkpoints and Hugging Face safetensors (Llama 2, Llama 3/3.1/3.2, TinyLlama, SmolLM2,
-  SmolLM3, Mistral, Qwen2/2.5, Qwen3, Gemma 2, Gemma 3 1B-27B text; llama3, linear and yarn RoPE scaling; per-layer
-  sliding windows; layers without RoPE; logit soft-capping), Hugging Face `tokenizer.json`
+  SmolLM3, Mistral, Qwen2/2.5, Qwen3, Qwen3.5/3.6 dense, Gemma 2, Gemma 3 1B-27B text; llama3, linear and yarn
+  RoPE scaling; per-layer sliding windows; layers without RoPE; linear attention with the gated delta rule;
+  logit soft-capping), Hugging Face `tokenizer.json`
   (SentencePiece-style including Gemma's, Llama 3, Qwen and GPT-2 byte-level BPE, identical to the `tokenizers` library)
 - **Use:** text generation, chat mode (`llama3`, `zephyr`, `llama2`, `qwen`, `smollm`, `chatml`, `gemma` templates), top-k /
   top-p / repetition penalty, perplexity measurement, importance matrices for Q4, an OpenAI-compatible HTTP server

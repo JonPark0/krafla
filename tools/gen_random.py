@@ -23,10 +23,24 @@ def generate(cfg, seed=0):
         return (1.0 + 0.01 * rng.standard_normal(n)).astype(np.float32)
 
     w = {"tok_emb": (0.5 * rng.standard_normal((cfg["vocab"], dim))).astype(np.float32), "layers": []}
-    for _ in range(cfg["n_layers"]):
+    nk, nv, dk, dv, kc, conv, vw = mlb.lin_dims(cfg)
+    for li in range(cfg["n_layers"]):
+        if mlb.layer_linear(cfg, li):   # gated delta rule (Qwen3.5)
+            w["layers"].append({"attn_norm": norm(), "lqkv": mat(conv, dim), "lz": mat(vw, dim),
+                                "lb": mat(nv, dim), "la": mat(nv, dim),
+                                "lconv": (0.5 * rng.standard_normal((conv, kc))).astype(np.float32),
+                                "ldt": (0.5 * rng.standard_normal(nv)).astype(np.float32),
+                                "lalog": np.log(rng.uniform(0.5, 4.0, nv)).astype(np.float32),
+                                "lnorm": norm(dv), "lout": mat(dim, vw), "ffn_norm": norm(),
+                                "w1": mat(hid, dim), "w2": mat(dim, hid), "w3": mat(hid, dim)})
+            if cfg.get("post_norms"):
+                w["layers"][-1].update(post_attn_norm=norm(), post_ffn_norm=norm())
+            continue
         w["layers"].append({"attn_norm": norm(), "wq": mat(qd, dim), "wk": mat(kv, dim),
                             "wv": mat(kv, dim), "wo": mat(dim, qd), "ffn_norm": norm(),
                             "w1": mat(hid, dim), "w2": mat(dim, hid), "w3": mat(hid, dim)})
+        if cfg.get("attn_gate"):
+            w["layers"][-1]["wg"] = mat(qd, dim)
         if cfg.get("qkv_bias"):
             w["layers"][-1].update(bq=(0.2 * rng.standard_normal(qd)).astype(np.float32),
                                    bk=(0.2 * rng.standard_normal(kv)).astype(np.float32),
@@ -66,6 +80,13 @@ def main():
                     help="with --sliding-window: only layers other than every N-th slide (Gemma 3), "
                          "and with --rope-local-theta use that base")
     ap.add_argument("--rope-local-theta", type=float, default=0.0, help="RoPE base of the sliding layers")
+    ap.add_argument("--linear-every", type=int, default=0, metavar="N",
+                    help="linear-attention (gated delta rule) layers, all but every N-th (Qwen3.5: 4)")
+    ap.add_argument("--lin-heads", default="2,4", metavar="K,V", help="linear attention key and value heads")
+    ap.add_argument("--lin-dims", default="16,16", metavar="DK,DV", help="their head sizes")
+    ap.add_argument("--lin-conv", type=int, default=4, help="conv kernel size")
+    ap.add_argument("--rot-dim", type=int, default=0, help="RoPE on the first N dimensions of each head only")
+    ap.add_argument("--attn-gate", action="store_true", help="attention output gated by a projection (Qwen3.5)")
     ap.add_argument("--nope-every", type=int, default=0, metavar="N",
                     help="every N-th layer leaves q and k unrotated (NoPE, SmolLM3)")
     ap.add_argument("--gelu", action="store_true", help="GELU (tanh) FFN activation instead of SiLU (Gemma)")
@@ -93,6 +114,15 @@ def main():
         cfg["layer_flags"] = [(mlb.LAYER_SLIDING if s else 0) | (mlb.LAYER_LOCAL_ROPE if s and a.rope_local_theta else 0)
                               for s in sl]
         cfg["rope_local_theta"] = a.rope_local_theta or None
+    if a.rot_dim:
+        cfg["rot_dim"] = a.rot_dim
+    if a.attn_gate:
+        cfg["attn_gate"] = 1
+    if a.linear_every:   # layer i is linear unless (i + 1) % N == 0
+        nk, nv = (int(x) for x in a.lin_heads.split(","))
+        dk, dv = (int(x) for x in a.lin_dims.split(","))
+        cfg.update(lin_k_heads=nk, lin_v_heads=nv, lin_k_dim=dk, lin_v_dim=dv, lin_conv=a.lin_conv,
+                   layer_flags=[0 if (i + 1) % a.linear_every == 0 else mlb.LAYER_LINEAR for i in range(a.layers)])
     if a.nope_every:   # layer i has no RoPE when (i + 1) % N == 0
         flags = cfg.get("layer_flags") or [0] * a.layers
         cfg["layer_flags"] = [f | (mlb.LAYER_NO_ROPE if (i + 1) % a.nope_every == 0 else 0) for i, f in enumerate(flags)]

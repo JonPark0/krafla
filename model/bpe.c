@@ -286,14 +286,16 @@ static int encode_spm(const ml_tokenizer *t, const unsigned char *s, int n, int 
 /* The Llama 3 pre-tokenizer regex, matched by hand on code points:
  *   (?i:'s|'t|'re|'ve|'m|'ll|'d) | [^\r\n\p{L}\p{N}]?\p{L}+ | \p{N}{1,3}
  *   | ' '?[^\s\p{L}\p{N}]+[\r\n]* | \s*[\r\n]+ | \s+(?!\S) | \s+
- * Qwen2 uses \p{N} instead of \p{N}{1,3} (ndig = 1).
+ * Qwen2 uses \p{N} instead of \p{N}{1,3} (ndig = 1). Qwen3.5 (marks) also
+ * puts \p{M} with the letters: [\p{L}\p{M}]+ in the second branch, and
+ * [^\s\p{L}\p{M}\p{N}] in the fourth.
  * Returns the end of the chunk that starts at code point k. */
-#define IS_L(i) ml_uni_is_letter(cp[i])
+#define IS_L(i) (ml_uni_is_letter(cp[i]) || (marks && ml_uni_is_mark(cp[i])))
 #define IS_N(i) ml_uni_is_number(cp[i])
 #define IS_S(i) ml_uni_is_space(cp[i])
 #define IS_NL(i) (cp[i] == '\r' || cp[i] == '\n')
 #define IS_OTHER(i) (!IS_S(i) && !IS_L(i) && !IS_N(i))
-static int chunk_end(const uint32_t *cp, int m, int k, int ndig) {
+static int chunk_end(const uint32_t *cp, int m, int k, int ndig, int marks) {
     if (cp[k] == '\'' && k + 1 < m) {
         const uint32_t a = cp[k + 1] | 0x20, b = k + 2 < m ? cp[k + 2] | 0x20 : 0;
         if (cp[k + 1] < 0x80 && (a == 's' || a == 't' || a == 'm' || a == 'd')) return k + 2;
@@ -302,7 +304,8 @@ static int chunk_end(const uint32_t *cp, int m, int k, int ndig) {
             return k + 3;
     }
     int j = k;
-    if (!IS_L(k) && !IS_N(k) && !IS_NL(k) && k + 1 < m && IS_L(k + 1)) j = k + 1;
+    /* the optional first character excludes letters but not marks */
+    if (!ml_uni_is_letter(cp[k]) && !IS_N(k) && !IS_NL(k) && k + 1 < m && IS_L(k + 1)) j = k + 1;
     if (IS_L(j)) {
         while (j < m && IS_L(j)) j++;
         return j;
@@ -333,6 +336,7 @@ static int chunk_end(const uint32_t *cp, int m, int k, int ndig) {
  *   | \s+(?!\S) | \s+
  * Contractions are lowercase only. Returns the end of the chunk at k. */
 static int chunk_end_gpt2(const uint32_t *cp, int m, int k) {
+    const int marks = 0;
     if (cp[k] == '\'' && k + 1 < m) {
         const uint32_t a = cp[k + 1], b = k + 2 < m ? cp[k + 2] : 0;
         if (a == 's' || a == 't' || a == 'm' || a == 'd') return k + 2;
@@ -391,7 +395,9 @@ static int encode_byte_bpe(const ml_tokenizer *t, const unsigned char *s, int n,
             int end = m;   /* the regex runs on the text between isolated digits */
             if (iso)
                 for (end = k; end < m && !IS_N(end); end++) {}
-            j = gpt2 ? chunk_end_gpt2(cp, end, k) : chunk_end(cp, end, k, t->flags & ML_TOKF_DIGITS1 ? 1 : 3);
+            j = gpt2 ? chunk_end_gpt2(cp, end, k)
+                     : chunk_end(cp, end, k, t->flags & (ML_TOKF_DIGITS1 | ML_TOKF_MARKS) ? 1 : 3,
+                                 (t->flags & ML_TOKF_MARKS) != 0);
         }
         if (encode_chunk(t, s + off[k], off[j] - off[k], sym, e) < 0) return -1;
         k = j;

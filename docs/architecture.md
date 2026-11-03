@@ -253,6 +253,26 @@ long-context table in [Testing](testing.md#benchmarking).
 Per head, the arithmetic does not depend on the block size or the thread
 count, so results stay bit-identical across `-t` and `--batch`.
 
+## Linear attention
+
+Qwen3.5 puts three linear-attention layers before each attention layer. A
+linear layer (`ops/delta.c`, the gated delta rule; see
+[the file format](file-format.md#linear-attention) for the math) keeps, in
+place of a KV cache, a causal-convolution window per channel and a
+`dk × dv` state per value head, so its memory and its cost per token stay the
+same however long the context gets.
+
+- **Order:** the state must take the tokens in order. Its convolution is split
+  across the pool by channel, its update by value head, and each takes every
+  token of a batch in turn, with the arithmetic of a single token: logits do
+  not depend on the thread count or the batch size.
+- **Vectorizing:** the update's loops over the value dimension are
+  element-wise. `ops/delta.c` is compiled with `-O3`, which vectorizes them
+  without reordering any sum (2.1× faster prefill on Qwen3.5 0.8B).
+- **Starting over:** the state cannot be rewound to an earlier position. A run
+  that starts at position 0 clears it; one that starts anywhere else must
+  continue where the last one ended.
+
 ## Tokenizers
 
 `model/bpe.c` implements the two `tokenizer.json` kinds the converter accepts

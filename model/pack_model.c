@@ -29,14 +29,16 @@ static void pack_task(void *p, int tid, int nt) {
 /* The matrices to pack, in a fixed order: every layer's, then the classifier
  * (Q8 ones only where the build has Q8 packed kernels). */
 static ml_status collect(ml_model *m, pack_job *job) {
-    job->mats = malloc(sizeof(ml_qtensor *) * ((size_t)m->cfg.n_layers * 7 + 1));
+    job->mats = malloc(sizeof(ml_qtensor *) * ((size_t)m->cfg.n_layers * ML_LAYER_MATS + 1));
     job->n = 0;
     if (!job->mats) return ML_E_NOMEM;
-#define ADD(W) do { if ((W)->type == ML_Q4_0 || ML_PACK_Q8) job->mats[job->n++] = (W); } while (0)
+    /* a matrix with a partial group of rows stays row-major (linear attention's gates) */
+#define ADD(W) do { if (((W)->type == ML_Q4_0 || ML_PACK_Q8) && (W)->rows % (ML_PACK_G ? ML_PACK_G : 1) == 0) \
+                        job->mats[job->n++] = (W); } while (0)
     for (int l = 0; l < m->cfg.n_layers; l++) {
-        ml_layer *L = &m->layers[l];
-        ml_qtensor *ws[7] = { &L->wq, &L->wk, &L->wv, &L->wo, &L->w1, &L->w2, &L->w3 };
-        for (int k = 0; k < 7; k++) ADD(ws[k]);
+        ml_qtensor *ws[ML_LAYER_MATS];
+        const int k = ml_layer_mats(&m->layers[l], ws);
+        for (int i = 0; i < k; i++) ADD(ws[i]);
     }
     ADD(&m->wcls);
 #undef ADD

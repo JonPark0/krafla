@@ -18,6 +18,10 @@ int ml_uni_is_letter(uint32_t cp) {
     return in_ranges(ml_uni_letter, ml_uni_letter_n, cp);
 }
 
+int ml_uni_is_mark(uint32_t cp) {
+    return cp >= 0x300 && in_ranges(ml_uni_mark, ml_uni_mark_n, cp);
+}
+
 int ml_uni_is_number(uint32_t cp) {
     if (cp < 0x80) return cp >= '0' && cp <= '9';
     return in_ranges(ml_uni_number, ml_uni_number_n, cp);

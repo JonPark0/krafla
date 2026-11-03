@@ -49,7 +49,8 @@ enum { ML_TOKF_ADD_BOS = 1, ML_TOKF_IGNORE_MERGES = 2, ML_TOKF_PREPEND_FIRST = 4
        ML_TOKF_GPT2 = 32,        /* byte-level: the GPT-2 pre-tokenizer regex, not Llama 3's */
        ML_TOKF_ISOLATE_DIGITS = 64,   /* byte-level: each \p{N} split off before the regex (SmolLM2) */
        ML_TOKF_NO_PREPEND = 128,   /* SentencePiece-style: no U+2581 before the text (Gemma) */
-       ML_TOKF_ALL = 255 };
+       ML_TOKF_MARKS = 256,      /* byte-level: letter runs take \p{M} marks too (Qwen3.5), with \p{N} chunks of one digit */
+       ML_TOKF_ALL = 511 };
 
 /* Loads either format (detected by the "MLT1" magic). vocab: the model's
  * vocabulary size; llama2.c files hold exactly that many tokens, MLT1 files

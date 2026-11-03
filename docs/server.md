@@ -109,7 +109,9 @@ object, or `chat.completion.chunk` events when streaming.
 - **The KV cache stays between requests.** When a request's prompt starts with
   the tokens of the previous one, as the next turn of a chat does, only the new
   tokens run. This saves time, not tokens: a request gets the same reply from
-  an empty cache.
+  an empty cache. Models with linear-attention layers (Qwen3.5) keep a state
+  that cannot be cut back, so for them only a request that continues all of
+  the previous one reuses it.
 - **Conversations are rendered as `ml_run --chat` renders them,** turn by turn.
   An earlier assistant message is encoded with its turn and closed with the
   template's stop token. If the last message is from the assistant, the reply
@@ -128,7 +130,7 @@ object, or `chat.completion.chunk` events when streaming.
 | Option | Meaning |
 |--------|---------|
 | `-z FILE` | Tokenizer. Required. |
-| `--chat TEMPLATE` | Chat template, as for `ml_run`: `llama3`, `zephyr`, `llama2`, `chatml`, `qwen`, `smollm` or `gemma`. |
+| `--chat TEMPLATE` | Chat template, as for `ml_run`: `llama3`, `zephyr`, `llama2`, `chatml`, `qwen`, `smollm`, `gemma`, `qwen3.5` or `qwen3.5-nothink`. |
 | `--system TEXT` | System prompt for chat requests that have none. |
 | `--host ADDR` | IP address to listen on. Default `127.0.0.1`; `0.0.0.0` listens on every IPv4 interface. Takes an address or `localhost`, not other host names. |
 | `--port N` | Default 8080; `0` picks a free port, printed at start. |

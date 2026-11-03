@@ -63,6 +63,9 @@ apps: $(addprefix $(BUILD)/,$(APPS))
 print-build:
 	@echo $(BUILD)
 
+# the gated delta rule's element-wise loops over value dimensions: -O2 leaves
+# them scalar; -O3 vectorizes them (no reassociation, the same results)
+$(BUILD)/obj/ops/delta.o: CFLAGS += -O3
 $(BUILD)/obj/%.o: %.c
 	@mkdir -p $(dir $@)
 	@$(CC) $(if $(filter $<,$(NOISA_SRC)),$(BASE_CFLAGS),$(CFLAGS)) -c $< -o $@
@@ -77,7 +80,8 @@ $(BUILD)/test_%: $(BUILD)/obj/tests/test_%.o $(GUARD_OBJ) $(LIB_OBJ)
 MODELS := build/models/rand_q8.mlb build/models/rand_q4.mlb build/models/ctx_q4.mlb build/models/mix_q4.mlb \
           build/models/chat_q8.mlb build/models/bias_q4.mlb \
           build/models/qk_q4.mlb build/models/swa_q8.mlb build/models/yarn_q4.mlb \
-          build/models/lwin_q8.mlb build/models/gemma_q4.mlb build/models/g2_q8.mlb build/models/nope_q4.mlb
+          build/models/lwin_q8.mlb build/models/gemma_q4.mlb build/models/g2_q8.mlb build/models/nope_q4.mlb \
+          build/models/hyb_q8.mlb build/models/hyb_q4.mlb build/models/hybl_q4.mlb
 build/models/rand_%.mlb: tools/gen_random.py tools/mlb.py
 	@mkdir -p $(dir $@)
 	@$(PYTHON) tools/gen_random.py --out $@ --wtype $* --dump-emb-row 5
@@ -128,6 +132,22 @@ build/models/g2_q8.mlb: tools/gen_random.py tools/mlb.py
 build/models/nope_q4.mlb: tools/gen_random.py tools/mlb.py
 	@mkdir -p $(dir $@)
 	@$(PYTHON) tools/gen_random.py --out $@ --wtype q4 --layers 4 --nope-every 2 --seed 6
+
+# Qwen3.5's hybrid: linear-attention (gated delta rule) layers between
+# attention layers with an output gate, per-head q/k norm and RoPE on 8 of 16
+# dimensions; hybl_q4 is larger (dim 128, 160 positions), for the threaded
+# and batched paths of the linear layers
+HYB := --layers 4 --linear-every 2 --attn-gate --qk-norm
+build/models/hyb_q8.mlb: tools/gen_random.py tools/mlb.py
+	@mkdir -p $(dir $@)
+	@$(PYTHON) tools/gen_random.py --out $@ --wtype q8 $(HYB) --rot-dim 8 --seed 23
+build/models/hyb_q4.mlb: tools/gen_random.py tools/mlb.py
+	@mkdir -p $(dir $@)
+	@$(PYTHON) tools/gen_random.py --out $@ --wtype q4 $(HYB) --rot-dim 8 --scales f16 --seed 23
+build/models/hybl_q4.mlb: tools/gen_random.py tools/mlb.py
+	@mkdir -p $(dir $@)
+	@$(PYTHON) tools/gen_random.py --out $@ --wtype q4 $(HYB) --rot-dim 16 --dim 128 --heads 4 --kv-heads 2 \
+		--hidden 256 --vocab 96 --max-seq 160 --lin-heads 4,8 --lin-dims 32,32 --seed 11
 
 # yarn RoPE scaling (factor 4 over an original context of 8)
 build/models/yarn_q4.mlb: tools/gen_random.py tools/mlb.py

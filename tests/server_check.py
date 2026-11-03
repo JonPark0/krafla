@@ -92,6 +92,12 @@ def main():
     finally:
         srv.kill()
         srv.wait()
+    srv, port = start([f"{M}/hyb_q8.mlb", "-z", f"{M}/tok96.bin"])   # linear attention (Qwen3.5)
+    try:
+        hybrid_checks(port)
+    finally:
+        srv.kill()
+        srv.wait()
     env = dict(os.environ, KRAFLA_API_KEY="sekret")
     srv, port = start(CHAT, env)   # no --chat: completions only
     try:
@@ -234,6 +240,28 @@ def run_checks(port):
     s = c.chat.completions.create(model="chat_q8", messages=msgs, max_tokens=6, temperature=0, stream=True)
     text = "".join(ch.choices[0].delta.content or "" for ch in s if ch.choices)
     check(text == reply, f"openai client stream: {text!r}")
+
+
+def hybrid_checks(port):
+    """Linear-attention states are continued, never cut back: a request that
+    continues the last one reuses it, any other starts over, and the replies
+    are the same either way."""
+    def complete(prompt):
+        st, r = post(port, "/v1/completions", {"prompt": prompt, "max_tokens": 8, "temperature": 0})
+        check(st == 200, f"hybrid completion: {st} {r}")
+        return r["choices"][0]["text"], r["usage"]
+    t1, u1 = complete("abcdefghij")
+    ref = subprocess.run(PRE + [f"{B}/ml_run", f"{M}/hyb_q8.mlb", "-z", f"{M}/tok96.bin", "-T", "0",
+                                "-n", str(u1["prompt_tokens"] + 7), "-i", "abcdefghij"],
+                         capture_output=True, check=True).stdout.decode("utf-8", "replace")[:-1]
+    check(ref.endswith(t1) and t1, f"hybrid completion {t1!r} is not the end of ml_run's {ref!r}")
+    longer = "abcdefghij" + t1 + "klm"
+    t2, u2 = complete(longer)
+    check(u2["prompt_tokens_details"]["cached_tokens"] > 0, f"hybrid continuation reused nothing: {u2}")
+    complete("zzz")
+    t3, u3 = complete(longer)
+    check(u3["prompt_tokens_details"]["cached_tokens"] == 0, f"hybrid state cut back: {u3}")
+    check(t3 == t2, f"hybrid reply depends on the cache: {t2!r} vs {t3!r}")
 
 
 def auth_checks(port):

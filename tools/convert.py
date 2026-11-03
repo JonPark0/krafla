@@ -113,14 +113,76 @@ def read_safetensors(path):
     return out
 
 
-def _unrotate(w, n_heads):
-    """HF rotate_half q/k rows -> interleaved-pair rows (llama2.c convention)."""
+def _unrotate(w, n_heads, rd=None):
+    """HF rotate_half q/k rows -> interleaved-pair rows (llama2.c convention),
+    in the first rd rows of each head (default: all of them; partial rotary
+    embeddings rotate only those)."""
     rows, dim = w.shape
     hd = rows // n_heads
-    return w.reshape(n_heads, 2, hd // 2, dim).transpose(0, 2, 1, 3).reshape(rows, dim)
+    rd = rd or hd
+    w = np.asarray(w).reshape(n_heads, hd, dim)
+    rot = w[:, :rd].reshape(n_heads, 2, rd // 2, dim).transpose(0, 2, 1, 3).reshape(n_heads, rd, dim)
+    return np.concatenate([rot, w[:, rd:]], axis=1).reshape(rows, dim)
 
 
-HF_TYPES = ("llama", "mistral", "qwen2", "qwen3", "smollm3", "gemma2", "gemma3_text")
+HF_TYPES = ("llama", "mistral", "qwen2", "qwen3", "qwen3_5_text", "smollm3", "gemma2", "gemma3_text")
+
+
+def load_qwen35(c, pre, t, max_seq=None):
+    """Qwen3.5 and 3.6 (dense): linear-attention (gated delta rule) layers
+    and gated attention layers, as listed in layer_types. The vision tower and
+    the multi-token prediction head (mtp.*) are left out."""
+    nh, nkv = c["num_attention_heads"], c["num_key_value_heads"]
+    hd = c.get("head_dim") or c["hidden_size"] // nh
+    rp = c.get("rope_parameters") or {}
+    if (rp.get("rope_type") or "default") != "default" or c.get("rope_scaling"):
+        raise ValueError("RoPE scaling is not supported for Qwen3.5")
+    rd = int(hd * float(c.get("partial_rotary_factor") or rp.get("partial_rotary_factor") or 1.0))
+    if c.get("hidden_act", "silu") != "silu" or c.get("attention_bias"):
+        raise ValueError("Qwen3.5 with an activation other than SiLU or attention biases is not supported")
+    lin = [x == "linear_attention" for x in c["layer_types"]]
+    if any(x not in ("linear_attention", "full_attention") for x in c["layer_types"]):
+        raise ValueError(f"layer types other than linear_attention and full_attention: {set(c['layer_types'])}")
+    tied = c.get("tie_word_embeddings", False) or "lm_head.weight" not in t
+    n = c["num_hidden_layers"]
+    cfg = dict(dim=c["hidden_size"], n_layers=n, n_heads=nh, n_kv_heads=nkv, hidden_dim=c["intermediate_size"],
+               vocab=c["vocab_size"], max_seq=min(c["max_position_embeddings"], max_seq or c["max_position_embeddings"]),
+               qkv_bias=0, rope_theta=float(c.get("rope_theta") or rp.get("rope_theta") or 10000.0),
+               norm_eps=float(c.get("rms_norm_eps", 1e-6)), shared_classifier=int(tied), rope_scaling=None,
+               head_dim=hd, qk_norm=1, sliding_window=0, act="silu", model_type="qwen3_5_text",
+               rot_dim=rd if rd != hd else None, attn_gate=int(bool(c.get("attn_output_gate", True))),
+               lin_k_heads=c["linear_num_key_heads"], lin_v_heads=c["linear_num_value_heads"],
+               lin_k_dim=c["linear_key_head_dim"], lin_v_dim=c["linear_value_head_dim"],
+               lin_conv=c["linear_conv_kernel_dim"], layer_flags=[mlb.LAYER_LINEAR if x else 0 for x in lin])
+    norm = lambda v: v + 1.0   # zero-centered RMSNorm weights: x * (1 + w)
+    w = {"tok_emb": t[pre + "embed_tokens.weight"], "final_norm": norm(t[pre + "norm.weight"]), "layers": []}
+    for i in range(n):
+        p = f"{pre}layers.{i}."
+        L = {"attn_norm": norm(t[p + "input_layernorm.weight"]), "ffn_norm": norm(t[p + "post_attention_layernorm.weight"]),
+             "w1": t[p + "mlp.gate_proj.weight"], "w2": t[p + "mlp.down_proj.weight"], "w3": t[p + "mlp.up_proj.weight"]}
+        if lin[i]:
+            a = p + "linear_attn."
+            conv = t[a + "conv1d.weight"]   # [channels, 1, kernel]
+            L.update(lqkv=t[a + "in_proj_qkv.weight"], lz=t[a + "in_proj_z.weight"], lb=t[a + "in_proj_b.weight"],
+                     la=t[a + "in_proj_a.weight"], lout=t[a + "out_proj.weight"], ldt=t[a + "dt_bias"],
+                     lalog=t[a + "A_log"], lnorm=t[a + "norm.weight"],   # the gated norm: plain weights
+                     lconv=Lazy(lambda conv=conv: np.asarray(conv).reshape(conv.shape[0], -1),
+                                (conv.shape[0], conv.shape[-1])))
+        else:
+            s = p + "self_attn."
+            qg = t[s + "q_proj.weight"]   # per head: the query's head_dim rows, then the gate's
+            half = (nh * hd, qg.shape[1])
+            L.update(wq=Lazy(lambda qg=qg: _unrotate(np.asarray(qg).reshape(nh, 2, hd, -1)[:, 0].reshape(half), nh, rd),
+                             half),
+                     wg=Lazy(lambda qg=qg: np.asarray(qg).reshape(nh, 2, hd, -1)[:, 1].reshape(half), half),
+                     wk=lazy(lambda x: _unrotate(x, nkv, rd), t[s + "k_proj.weight"]),
+                     wv=t[s + "v_proj.weight"], wo=t[s + "o_proj.weight"],
+                     q_norm=norm(lazy(lambda x: _unrotate(x[:, None], 1, rd)[:, 0], t[s + "q_norm.weight"])),
+                     k_norm=norm(lazy(lambda x: _unrotate(x[:, None], 1, rd)[:, 0], t[s + "k_norm.weight"])))
+        w["layers"].append(L)
+    if not tied:
+        w["wcls"] = t["lm_head.weight"]
+    return cfg, w
 
 
 def _window(c):
@@ -189,7 +251,19 @@ def load_hf(d, max_seq=None):
         # (language_model.*) and leave the vision tower out
         c, pre = c["text_config"], "language_model.model."
         c.setdefault("model_type", "gemma3_text")
+    if c.get("model_type") == "qwen3_5" and "text_config" in c:
+        # Qwen3.5 and 3.6 ship as image-text models: convert the language model
+        outer, c, pre = c, dict(c["text_config"]), "model.language_model."
+        c.setdefault("model_type", "qwen3_5_text")
+        c.setdefault("tie_word_embeddings", outer.get("tie_word_embeddings", False))
     mtype = c.get("model_type", "llama")
+    if mtype == "qwen3_5_text":
+        t = {}
+        for f in sorted(glob.glob(os.path.join(d, "*.safetensors"))):
+            t.update(read_safetensors(f))
+        if not t:
+            raise FileNotFoundError(f"no .safetensors in {d}")
+        return load_qwen35(c, pre, t, max_seq)
     if mtype not in HF_TYPES:
         raise ValueError(f"model_type {mtype!r} is not supported (only {', '.join(HF_TYPES)})")
     gemma = mtype in ("gemma2", "gemma3_text")

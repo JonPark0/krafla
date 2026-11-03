@@ -11,6 +11,8 @@ int ml_chat_template(const char *name) {
     if (!strcmp(name, "qwen")) return ML_CHAT_QWEN;
     if (!strcmp(name, "smollm")) return ML_CHAT_SMOLLM;
     if (!strcmp(name, "gemma")) return ML_CHAT_GEMMA;
+    if (!strcmp(name, "qwen3.5")) return ML_CHAT_QWEN35;
+    if (!strcmp(name, "qwen3.5-nothink")) return ML_CHAT_QWEN35_NOTHINK;
     return -1;
 }
 
@@ -19,7 +21,8 @@ int ml_chat_bos_each_turn(int tpl) { return tpl == ML_CHAT_LLAMA2; }
 const char *ml_chat_stop(int tpl) {
     if (tpl == ML_CHAT_LLAMA3) return "<|eot_id|>";
     if (tpl == ML_CHAT_GEMMA) return "<end_of_turn>";
-    return tpl == ML_CHAT_CHATML || tpl == ML_CHAT_QWEN || tpl == ML_CHAT_SMOLLM ? "<|im_end|>" : "</s>";
+    return tpl == ML_CHAT_CHATML || tpl == ML_CHAT_QWEN || tpl == ML_CHAT_SMOLLM || tpl == ML_CHAT_QWEN35 ||
+           tpl == ML_CHAT_QWEN35_NOTHINK ? "<|im_end|>" : "</s>";
 }
 
 static const char QWEN_SYSTEM[] = "You are Qwen, created by Alibaba Cloud. You are a helpful assistant.";
@@ -54,9 +57,12 @@ char *ml_chat_render(int tpl, const char *system, const char *user, int first) {
     case ML_CHAT_CHATML:   /* also Qwen2.5: a reply is "...<|im_end|>\n" */
     case ML_CHAT_QWEN:
     case ML_CHAT_SMOLLM:
+    case ML_CHAT_QWEN35:
+    case ML_CHAT_QWEN35_NOTHINK:
         if (!first) strcpy(out, "\n");
         if (sys) snprintf(out + strlen(out), n - strlen(out), "<|im_start|>system\n%s<|im_end|>\n", system);
-        snprintf(out + strlen(out), n - strlen(out), "<|im_start|>user\n%s<|im_end|>\n<|im_start|>assistant\n", user);
+        snprintf(out + strlen(out), n - strlen(out), "<|im_start|>user\n%s<|im_end|>\n<|im_start|>assistant\n%s", user,
+                 tpl == ML_CHAT_QWEN35 ? "<think>\n" : tpl == ML_CHAT_QWEN35_NOTHINK ? "<think>\n\n</think>\n\n" : "");
         break;
     case ML_CHAT_GEMMA:   /* a reply is "...<end_of_turn>\n"; no system role */
         if (!first) strcpy(out, "\n");
