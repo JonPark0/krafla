@@ -50,9 +50,11 @@ ifeq ($(ASM),1)
 endif
 LIB_OBJ := $(LIB_SRC:%.c=$(BUILD)/obj/%.o) $(ASM_SRC:%.S=$(BUILD)/obj/%.o)
 GUARD_OBJ := $(BUILD)/obj/app/main_guard.o
+# HTTP server (ml_server and its unit test only)
+SERVER_OBJ := $(patsubst %.c,$(BUILD)/obj/%.o,$(wildcard server/*.c))
 
 TESTS := $(patsubst tests/%.c,%,$(wildcard tests/test_*.c))
-APPS  := ml_run ml_bench ml_tok
+APPS  := ml_run ml_bench ml_tok ml_server
 
 .PHONY: all test clean guard-test e2e scalar-ref test-sve guard-test-arm bench test-all apps print-build
 .SECONDARY:
@@ -160,12 +162,13 @@ $(TOKENIZER): tools/gen_tokenizer.py
 
 $(BUILD)/ml_%: $(BUILD)/obj/app/ml_%.o $(GUARD_OBJ) $(LIB_OBJ)
 	@$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+$(BUILD)/ml_server $(BUILD)/test_server: $(SERVER_OBJ)
 
 # Host scalar build: the reference e2e compares generated text against.
 scalar-ref:
 	@$(MAKE) -s ISA=scalar CROSS= THREADS=1 ASM=0 DEBUG=0 EXTRA_CFLAGS= RUN= build/scalar/ml_run
 
-e2e: $(BUILD)/ml_run $(BUILD)/ml_tok $(MODELS) $(TOKENIZER) $(TOKS) scalar-ref
+e2e: $(BUILD)/ml_run $(BUILD)/ml_tok $(BUILD)/ml_server $(MODELS) $(TOKENIZER) $(TOKS) scalar-ref
 	@sh tests/test_e2e.sh $(ISA) $(BUILD) "$(RUN)"
 
 test: $(addprefix $(BUILD)/,$(TESTS)) $(MODELS) build/models/wrap32.mlb $(TOKS) $(TOKENIZER)

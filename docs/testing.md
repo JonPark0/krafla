@@ -1,7 +1,7 @@
 ---
 title: "Testing and benchmarking"
 description: "How Krafla is tested (kernels against scalar and double-precision references, logits against numpy, qemu for ARM and old x86) and benchmarked on each ISA."
-nav_order: 8
+nav_order: 9
 nav_title: "Testing and benchmarking"
 ---
 
@@ -11,8 +11,8 @@ nav_title: "Testing and benchmarking"
 
 | Command | What it checks |
 |---------|----------------|
-| `make ISA=X test` | C unit tests: `test_arena`, `test_quant`, `test_kernels` (including the packed and batched kernels), `test_load`, `test_sampler`, `test_threads`, `test_tokenizer` |
-| `make ISA=X e2e` | `tests/test_e2e.sh` runs `ml_run` against the numpy reference, the scalar build, and CLI edge cases |
+| `make ISA=X test` | C unit tests: `test_arena`, `test_quant`, `test_kernels` (including the packed and batched kernels), `test_load`, `test_sampler`, `test_server` (JSON, UTF-8, stop strings), `test_threads`, `test_tokenizer` |
+| `make ISA=X e2e` | `tests/test_e2e.sh` runs `ml_run` against the numpy reference, the scalar build, and CLI edge cases, and `ml_server` through `tests/server_check.py` |
 | `python3 -m pytest tests` | the Python tools: format round trips, the reference forward, the model and tokenizer converters, RoPE scaling |
 | `tests/check_tokenizer.py` | `ml_tok` against the Hugging Face `tokenizers` library (run by `make test-all`, see below) |
 | `make guard-test` | x86 ISA guard, using `qemu-x86_64 -cpu core2duo/Nehalem/SandyBridge/Haswell` |
@@ -52,6 +52,13 @@ The first lines of the output name the kernel each op resolved to, for example
 - **Context limit:** generation stops at `--ctx` (default `max_seq`, at most
   4096), and `--dump-logits` with more tokens than that exits with code 2, as
   does a `--ctx` above `max_seq`. A shorter `--ctx` gives the same logits.
+- **Server:** `tests/server_check.py` starts `ml_server` on a random port and
+  checks every endpoint over HTTP: a greedy chat reply equals `ml_run --chat`'s,
+  streamed deltas add up to the same reply, a repeated or multi-turn request
+  gets the same reply whatever the cache held, stop strings cut the reply,
+  errors come in OpenAI's format, `Expect: 100-continue` works, a client that
+  leaves mid-stream does not stop the server, and an API key is enforced. With
+  the `openai` package installed, its client is tried too.
 - **Threads:** `-t 3/4/7` give logits identical to `-t 1`, and `ml_run` reports
   the thread count it used.
 - **Packing:** builds with packed kernels do pack (`packed: G` matches

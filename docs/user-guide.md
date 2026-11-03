@@ -31,9 +31,9 @@ binaries for every ISA:
 | `krafla-VER-linux-armv7hf.tar.gz` | `neon`, `scalar` |
 | `krafla-VER-windows-x86_64.zip` | `sse2`, `sse41`, `avx2`, `avxvnni`, `avx512vnni` |
 
-The top-level `ml_run`, `ml_bench` and `ml_tok` (`.cmd` on Windows) try the
-builds in `bin/` from the fastest down and start the first one the CPU
-supports. To choose a build yourself, set `KRAFLA_ISA`, for example
+The top-level `ml_run`, `ml_server`, `ml_bench` and `ml_tok` (`.cmd` on
+Windows) try the builds in `bin/` from the fastest down and start the first
+one the CPU supports. To choose a build yourself, set `KRAFLA_ISA`, for example
 `KRAFLA_ISA=avx2`. The variable's old name, `ISA_LM_ISA`, still works. The
 archives also hold the model tools `tools/convert.py`,
 `tools/convert_tokenizer.py` and `tools/perplexity.py`, which need Python 3
@@ -71,8 +71,8 @@ without uploading.
 make ISA=<isa> [THREADS=1|pthread] [ASM=0|1] [CROSS=<prefix>] [DEBUG=1] [EXTRA_CFLAGS=...]
 ```
 
-The build writes `ml_run`, `ml_bench` and the test binaries to
-`build/<isa>[-<arch>][-pt][-asm][-dbg]/`. Each set of options gets its own
+The build writes `ml_run`, `ml_server`, `ml_bench`, `ml_tok` and the test
+binaries to `build/<isa>[-<arch>][-pt][-asm][-dbg]/`. Each set of options gets its own
 directory, so object files built with different flags never mix.
 
 ### Choosing the ISA
@@ -431,6 +431,9 @@ build/avx2/ml_run model.mlb --tokens 1,450,3681 --dump-logits l.f32
 | `--chat TEMPLATE` | Chat with the model: `llama3`, `zephyr`, `llama2`, `qwen`, `smollm`, `chatml` or `gemma`, see [Chat](#chat). Needs `-z`. |
 | `--system TEXT` | System prompt for `--chat`. |
 | `--eos ID` | Stop as soon as `ID` is generated. Without it, a run with `-z` stops at the tokenizer's BOS or EOS, and a run without `-z` uses every `-n` position. |
+
+To serve a model to other programs over HTTP with the OpenAI API, use
+`ml_server` instead; see [Server](server.md).
 
 When it finishes, `ml_run` prints two lines to stderr:
 

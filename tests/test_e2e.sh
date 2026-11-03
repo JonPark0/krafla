@@ -269,6 +269,10 @@ done
 $RUN $B/ml_run $M/chat_q8.mlb --chat llama3 -i hi >/dev/null 2>&1
 [ $? -eq 2 ] && ok || bad "--chat without -z should exit 2"
 
+# ml_server: endpoints, streaming, KV-cache reuse, stop strings, errors and
+# API keys; greedy replies equal ml_run's (tests/server_check.py)
+python3 tests/server_check.py "$RUN" $B $M && ok || bad "ml_server checks"
+
 # usage
 err=$($RUN $B/ml_run 2>&1); rc=$?
 [ $rc -eq 2 ] && echo "$err" | grep -q "usage:" && ok || bad "usage rc=$rc"

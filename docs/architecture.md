@@ -1,7 +1,7 @@
 ---
 title: "Architecture: compile-time kernel binding for CPU LLM inference"
 description: "How Krafla binds each operator to a per-ISA SIMD kernel at compile time, refuses to run on unsupported CPUs, packs weights, batches prompt prefill and splits inference across threads."
-nav_order: 5
+nav_order: 6
 nav_title: "Architecture"
 mermaid: true
 ---
@@ -11,8 +11,10 @@ mermaid: true
 ## Layers
 
 ```
-app/       ml_run (generation CLI), ml_bench (benchmarks), ml_tok (encode/decode text),
-           main_guard.c (process entry)
+app/       ml_run (generation CLI), ml_server (OpenAI-compatible HTTP server),
+           ml_bench (benchmarks), ml_tok (encode/decode text), main_guard.c (process entry)
+server/    net.c (sockets), http.c, json.c, api.c (OpenAI requests to tokens),
+           engine.c (generation, KV cache kept between requests); ml_server only
 model/     mlb.c (loader), transformer.c (forward pass, KV cache, RoPE tables),
            sampler.c, tokenizer.c (llama2.c format), bpe.c + unicode.c (tokenizer.json BPE)
 ops/       ops.c — matvec and attention, split across the worker pool
@@ -25,8 +27,8 @@ tools/     mlb.py, gen_random.py, gen_tokenizer.py, ref_forward.py, convert.py,
            convert_tokenizer.py, gen_unicode.py
 ```
 
-Dependencies point down only: `app → model → ops → kernels → core`. Kernels see
-only `core/ml.h` and their own intrinsics headers.
+Dependencies point down only: `app → server → model → ops → kernels → core`.
+Kernels see only `core/ml.h` and their own intrinsics headers.
 
 ## Compile-time kernel selection
 
