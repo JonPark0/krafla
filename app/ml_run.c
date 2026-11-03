@@ -25,7 +25,9 @@ static const char USAGE[] =
     "                   (needed for -i and text output)\n"
     "  -i TEXT          prompt text\n"
     "  --tokens LIST    prompt as comma-separated token ids\n"
-    "  -n N             positions to run, prompt included (default 64, max: model max_seq)\n"
+    "  -n N             positions to run, prompt included (default 64, max: --ctx)\n"
+    "  --ctx N          context length: positions the KV cache holds (default: the model's\n"
+    "                   max_seq, at most 4096; up to max_seq)\n"
     "  -T F             temperature, 0 = greedy (default 0)\n"
     "  -p F             top-p in [0, 1] (default 0.9)\n"
     "  --top-k N        sample only from the N most likely tokens (default 0: off)\n"
@@ -173,6 +175,12 @@ static int imatrix_save(const char *path, const ml_state *s) {
  * the previous reply in the same KV cache, and samples a reply up to the
  * template's stop token, the tokenizer's EOS, --eos, or max_reply tokens.
  * The token that ended a reply is fed at the start of the next turn. */
+static void context_full(const ml_state *s, int pos) {
+    fprintf(stderr, "context full: %d of %d positions used", pos, s->ctx);
+    if (s->ctx < s->m->cfg.max_seq) fprintf(stderr, " (--ctx can raise it to %d)", s->m->cfg.max_seq);
+    fputc('\n', stderr);
+}
+
 static int run_chat(ml_state *s, ml_tokenizer *tok, ml_sampler *smp, int tpl, const char *system,
                     const char *once, int max_reply, int eos_opt) {
     const ml_config *c = &s->m->cfg;
@@ -200,8 +208,8 @@ static int run_chat(ml_state *s, ml_tokenizer *tok, ml_sampler *smp, int tpl, co
         free(text);
         if (k < 0) { free(toks); rc = 1; break; }
         n += k;
-        if (pos + n + 1 > c->max_seq) {
-            fprintf(stderr, "context full: %d of %d positions used\n", pos, c->max_seq);
+        if (pos + n + 1 > s->ctx) {
+            context_full(s, pos);
             free(toks);
             break;
         }
@@ -211,7 +219,7 @@ static int run_chat(ml_state *s, ml_tokenizer *tok, ml_sampler *smp, int tpl, co
         int token = toks[n - 1], prev = -1, reply = 0;
         free(toks);
         npend = 0;
-        while (pos < c->max_seq) {
+        while (pos < s->ctx) {
             float *logits = ml_forward(s, token, pos++);
             if (!logits) { rc = 1; break; }
             const int next = ml_sample(smp, logits, c->vocab);
@@ -229,9 +237,10 @@ static int run_chat(ml_state *s, ml_tokenizer *tok, ml_sampler *smp, int tpl, co
         putchar('\n');
         fflush(stdout);
         first = 0;
-        if (rc || pos >= c->max_seq) break;
+        if (rc) break;
+        if (pos >= s->ctx) { context_full(s, pos); break; }
     }
-    fprintf(stderr, "positions: %d of %d\n", pos, c->max_seq);
+    fprintf(stderr, "positions: %d of %d\n", pos, s->ctx);
     return rc;
 }
 
@@ -240,7 +249,7 @@ int ml_main(int argc, char **argv) {
     const char *chat = NULL, *system = NULL, *imat = NULL;
     int steps_given = 0;
     int profile = 0, no_pack = 0, pack_cache = 0, kv_type = ML_F32;
-    int steps = 64, nthreads = 1, eos = -1, batch = ML_BATCH_MAX;
+    int steps = 64, nthreads = 1, eos = -1, batch = ML_BATCH_MAX, ctx = 0;
     float temp = 0.0f, topp = 0.9f, rep_pen = 1.0f;
     int topk = 0, rep_last = 64;
     unsigned long long seed = 1;
@@ -261,6 +270,7 @@ int ml_main(int argc, char **argv) {
         else if (!strcmp(a, "-i")) prompt = v;
         else if (!strcmp(a, "--tokens")) tokens_arg = v;
         else if (!strcmp(a, "-n")) ok = steps_given = parse_int(v, 1, 1 << 24, &steps);
+        else if (!strcmp(a, "--ctx")) ok = parse_int(v, 1, 1 << 24, &ctx);
         else if (!strcmp(a, "--chat")) ok = ml_chat_template(chat = v) >= 0;
         else if (!strcmp(a, "--system")) system = v;
         else if (!strcmp(a, "-T")) ok = parse_float(v, &temp);
@@ -299,6 +309,12 @@ int ml_main(int argc, char **argv) {
     if (st != ML_OK) { fprintf(stderr, "error: %s: %s\n", model_path, ml_status_str(st)); return 1; }
     const ml_config *c = &m.cfg;
     if (eos >= c->vocab) { ml_model_free(&m); return usage("--eos id out of range"); }
+    if (ctx > c->max_seq) {
+        fprintf(stderr, "error: --ctx %d is above the model's max_seq (%d)\n", ctx, c->max_seq);
+        ml_model_free(&m);
+        return 2;
+    }
+    if (!ctx) ctx = ml_ctx_default(c);
     ml_tokenizer tok;
     int have_tok = 0;
     if (tok_path) {
@@ -307,23 +323,23 @@ int ml_main(int argc, char **argv) {
         have_tok = 1;
     }
 
-    const int maxp = c->max_seq + 1;
+    const int maxp = ctx + 1;
     /* at most one token per byte, plus BOS and SentencePiece's prefix (3 bytes) */
     const size_t pcap = prompt ? 3 * strlen(prompt) + 8 : (size_t)maxp;
     int *ptoks = malloc(sizeof(int) * pcap);
     int np = 0, rc = 0;
     if (tokens_arg) {
         np = parse_tokens(tokens_arg, ptoks, maxp, c->vocab);
-        if (np < 0 || np > c->max_seq) { rc = usage("--tokens: bad id, id out of range, or longer than max_seq"); goto out_tok; }
+        if (np < 0 || np > ctx) { rc = usage("--tokens: bad id, id out of range, or longer than --ctx"); goto out_tok; }
     } else if (prompt && !chat) {
         np = ml_encode(&tok, prompt, 1, 0, ptoks, (int)pcap);
-        if (np > c->max_seq) np = c->max_seq;
+        if (np > ctx) np = ctx;
     }
     const int bos_id = have_tok && ml_tokenizer_bos(&tok) >= 0 ? ml_tokenizer_bos(&tok) : ML_TOK_BOS;
     if (np <= 0) { ptoks[0] = bos_id; np = 1; }
 
     ml_state s;
-    if ((st = ml_state_init(&s, &m, nthreads, kv_type)) != ML_OK) {
+    if ((st = ml_state_init(&s, &m, nthreads, kv_type, ctx)) != ML_OK) {
         fprintf(stderr, "error: %s\n", ml_status_str(st));
         rc = 1;
         goto out_tok;
@@ -351,7 +367,7 @@ int ml_main(int argc, char **argv) {
         FILE *f = fopen(dump, "wb");
         float *all = malloc(sizeof(float) * (size_t)np * c->vocab);
         if (!f || !all) { fprintf(stderr, "error: cannot write %s\n", dump); if (f) fclose(f); free(all); rc = 1; goto out_state; }
-        ml_prefill(&s, ptoks, np, 0, all);   /* ptoks were range-checked against vocab and max_seq above */
+        ml_prefill(&s, ptoks, np, 0, all);   /* ptoks were range-checked against vocab and ctx above */
         fwrite(all, sizeof(float), (size_t)np * c->vocab, f);
         fclose(f);
         free(all);
@@ -362,12 +378,12 @@ int ml_main(int argc, char **argv) {
     const ml_sampler_opts so = { temp, topp, topk, rep_pen, rep_last, seed };
     if (ml_sampler_init(&smp, c->vocab, &so) != ML_OK) { rc = 1; goto out_state; }
     if (chat) {
-        rc = run_chat(&s, &tok, &smp, ml_chat_template(chat), system, prompt, steps_given ? steps : c->max_seq, eos);
+        rc = run_chat(&s, &tok, &smp, ml_chat_template(chat), system, prompt, steps_given ? steps : ctx, eos);
         ml_sampler_free(&smp);
         goto out_state;
     }
     for (int i = 0; i < np; i++) ml_sampler_accept(&smp, ptoks[i]);
-    if (steps > c->max_seq) steps = c->max_seq;
+    if (steps > ctx) steps = ctx;
     /* Prompt: all but the last token go through batched prefill (no logits
      * needed); generation then continues token by token. */
     int token = ptoks[0], pos = 0;

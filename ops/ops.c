@@ -119,14 +119,14 @@ typedef struct {
 #define ATT_BLOCK 64
 
 /* Query heads [g0, g1), all of KV head kvh, at position pos; att holds
- * max_seq floats per head from g0 on. With a sliding window the head attends
+ * kv->ctx floats per head from g0 on. With a sliding window the head attends
  * to the last kv->window positions only. */
 static void attend(const ml_config *cfg, const ml_kv_layer *kv, float *out, const float *q, const int8_t *qq,
                    const float *qd, float *att, int g0, int g1, int pos) {
     const int hd = cfg->head_dim, kvh = g0 / (cfg->n_heads / cfg->n_kv_heads);
     const int first = kv->window && pos >= kv->window ? pos + 1 - kv->window : 0;
     const int n = pos + 1 - first;   /* positions attended, from `first` on */
-    const size_t ld = (size_t)cfg->kv_dim, ldd = (size_t)cfg->n_kv_heads, ldatt = (size_t)cfg->max_seq;
+    const size_t ld = (size_t)cfg->kv_dim, ldd = (size_t)cfg->n_kv_heads, ldatt = (size_t)kv->ctx;
     const size_t off = (size_t)kvh * hd + (size_t)first * ld, offd = (size_t)first * ldd;
     const float scale = cfg->attn_scale;
     for (int t0 = 0; t0 < n; t0 += ATT_BLOCK) {
@@ -161,7 +161,7 @@ static void attention_task(void *p, int tid, int nt) {
     const int h0 = (int)((long long)cfg->n_heads * tid / nt), h1 = (int)((long long)cfg->n_heads * (tid + 1) / nt);
     for (int g0 = h0; g0 < h1;) {
         const int gend = (g0 / group + 1) * group, g1 = gend < h1 ? gend : h1;   /* heads [g0, g1) share a KV head */
-        attend(cfg, c->kv, c->out, c->q, c->qq, c->qd, c->att + (size_t)g0 * cfg->max_seq, g0, g1, c->pos);
+        attend(cfg, c->kv, c->out, c->q, c->qq, c->qd, c->att + (size_t)g0 * c->kv->ctx, g0, g1, c->pos);
         g0 = g1;
     }
 }
@@ -204,7 +204,7 @@ static void attention_batch_task(void *p, int tid, int nt) {
     const attn_batch_ctx *c = p;
     const ml_config *cfg = c->a.cfg;
     const int dim = cfg->q_dim, per = cfg->n_heads / c->heads;
-    float *att = c->a.att + (size_t)tid * c->heads * cfg->max_seq;
+    float *att = c->a.att + (size_t)tid * c->heads * c->a.kv->ctx;
     for (int i = tid; i < c->n * per; i += nt) {
         const int t = i / per, g0 = i % per * c->heads;
         attend(cfg, c->a.kv, c->a.out + (size_t)t * dim, c->a.q + (size_t)t * dim,

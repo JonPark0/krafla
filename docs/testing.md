@@ -49,8 +49,9 @@ The first lines of the output name the kernel each op resolved to, for example
   at every position.
 - **Generated text:** greedy and seeded sampling produce text identical to the
   host scalar build.
-- **Context limit:** generation stops at `max_seq`, and `--dump-logits` with
-  more tokens than `max_seq` exits with code 2.
+- **Context limit:** generation stops at `--ctx` (default `max_seq`, at most
+  4096), and `--dump-logits` with more tokens than that exits with code 2, as
+  does a `--ctx` above `max_seq`. A shorter `--ctx` gives the same logits.
 - **Threads:** `-t 3/4/7` give logits identical to `-t 1`, and `ml_run` reports
   the thread count it used.
 - **Packing:** builds with packed kernels do pack (`packed: G` matches

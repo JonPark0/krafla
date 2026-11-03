@@ -287,7 +287,8 @@ def main(argv=None):
     ap.add_argument("--q8", default="", metavar="LIST",
                     help="q4 only: matrix classes kept in Q8, comma-separated from "
                          "emb, cls, qk, v, o, up, down (e.g. emb,cls,v,down)")
-    ap.add_argument("--max-seq", type=int, default=None, help="hf: cap the context length (KV cache size)")
+    ap.add_argument("--max-seq", type=int, default=None, help="hf: cap the context length the file allows (default: the model's; "
+                    "ml_run --ctx sets the KV cache size at run time)")
     ap.add_argument("--imatrix", metavar="FILE", help="q4 only: importance matrix from ml_run --imatrix")
     ap.add_argument("--q4-rule", choices=("auto", "fit", "round"), default="auto",
                     help="q4 only: fit each block's scale, or round as llama.cpp's Q4_0 does (better for "

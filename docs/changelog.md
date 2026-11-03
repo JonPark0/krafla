@@ -12,6 +12,15 @@ nav_title: "Changelog"
 
 ### Added
 
+- `--ctx N` for `ml_run`: the context length, which sizes the KV cache, the
+  attention scratch and the RoPE tables at run time, from 1 to the file's
+  `max_seq`. The default is `max_seq` capped at 4096, so a file converted at
+  the model's full context no longer reserves its whole KV cache. Logits do
+  not depend on it. `ml_state_init` takes the context length (0 for the
+  default); `ml_bench` sizes its state to the positions it runs, and
+  `tools/perplexity.py` to each chunk. When a chat fills the context,
+  `ml_run` says how far `--ctx` can raise it.
+
 - Zenodo DOI `10.5281/zenodo.23880653` (all versions): a badge in the README, `doi` in
   `CITATION.cff` and the BibTeX entries, and the site's structured data.
 - `.github/workflows/zenodo-doi.yml`, run by `release.yml` after publishing:

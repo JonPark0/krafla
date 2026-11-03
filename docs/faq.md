@@ -98,8 +98,9 @@ missing feature instead of crashing.
 About the size of its `.mlb` file plus the KV cache. With the default f16
 block scales, Qwen2.5 0.5B takes 265 MiB in Q4 and 500 MiB in Q8, Llama 3.2 1B
 663 MiB in Q4 and 1252 MiB in Q8, Gemma 3 4B 2083 MiB in Q4. The KV cache is
-`n_layers × max_seq × kv_dim × 8` bytes; `--kv f16` halves it and `--kv q8`
-makes it about 3.8× smaller. `--max-seq` at conversion sets `max_seq`.
+`n_layers × ctx × kv_dim × 8` bytes, where `ctx` is the context length set
+with `--ctx` (default 4096, or the model's `max_seq` if smaller); `--kv f16`
+halves it and `--kv q8` makes it about 3.8× smaller.
 
 ## Does it need a GPU, Python or other libraries?
 

@@ -186,13 +186,43 @@ static void test_state_huge_kv(void) {
     ml_model m;
     TT_EQ_INT(ml_model_load(&m, wrap_path), ML_OK);
     ml_state s;
-    ml_status st = ml_state_init(&s, &m, 1, ML_F32);
+    ml_status st = ml_state_init(&s, &m, 1, ML_F32, m.cfg.max_seq);
     TT_ASSERT(st == ML_OK || st == ML_E_NOMEM);
     if (st == ML_OK) {
         const float *l0 = ml_forward(&s, 1, 0);
         const float *l1 = ml_forward(&s, 2, m.cfg.max_seq - 1);
         TT_ASSERT(l0 && l1 && isfinite(l1[0]));
         ml_state_free(&s);
+    }
+    ml_model_free(&m);
+}
+
+/* ctx: 0 picks ml_ctx_default, above max_seq is refused, and positions from
+ * ctx on are out of range; the logits at a position do not depend on ctx. */
+static void test_state_ctx(void) {
+    ml_model m;
+    TT_EQ_INT(ml_model_load(&m, q8_path), ML_OK);
+    ml_state s, f;
+    TT_EQ_INT(ml_state_init(&s, &m, 1, ML_F32, m.cfg.max_seq + 1), ML_E_SHAPE);
+    TT_EQ_INT(ml_state_init(&s, &m, 1, ML_F32, -1), ML_E_SHAPE);
+    TT_EQ_INT(ml_state_init(&s, &m, 1, ML_F32, 0), ML_OK);
+    TT_EQ_INT(s.ctx, ml_ctx_default(&m.cfg));
+    TT_EQ_INT(s.ctx, m.cfg.max_seq < ML_CTX_DEFAULT ? m.cfg.max_seq : ML_CTX_DEFAULT);
+    ml_state_free(&s);
+    const int toks[] = { 1, 5, 9, 13, 17, 21, 25, 29, 33 };
+    for (int kv = 0; kv < 3; kv++) {
+        const int type = kv == 0 ? ML_F32 : kv == 1 ? ML_F16 : ML_Q8_0;
+        TT_EQ_INT(ml_state_init(&s, &m, 2, type, 8), ML_OK);
+        TT_EQ_INT(ml_state_init(&f, &m, 2, type, m.cfg.max_seq), ML_OK);
+        TT_EQ_INT(s.ctx, 8);
+        TT_EQ_INT(ml_prefill(&s, toks, 9, 0, NULL), ML_E_SHAPE);
+        TT_EQ_INT(ml_prefill(&s, toks, 7, 0, NULL), ML_OK);
+        TT_EQ_INT(ml_prefill(&f, toks, 7, 0, NULL), ML_OK);
+        const float *a = ml_forward(&s, toks[7], 7), *b = ml_forward(&f, toks[7], 7);
+        TT_ASSERT(a && b && !memcmp(a, b, sizeof(float) * m.cfg.vocab));
+        TT_ASSERT(ml_forward(&s, toks[8], 8) == NULL);
+        ml_state_free(&s);
+        ml_state_free(&f);
     }
     ml_model_free(&m);
 }
@@ -298,5 +328,6 @@ int TT_ENTRY(int argc, char **argv) {
     TT_RUN(test_load_rejects_q8_minus_128);
     TT_RUN(test_load_empty_file_is_format_error);
     TT_RUN(test_state_huge_kv);
+    TT_RUN(test_state_ctx);
     TT_MAIN_END("test_load");
 }

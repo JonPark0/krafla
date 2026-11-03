@@ -25,7 +25,7 @@ straight into it without copying. Everything is little-endian.
 | 20 | `u32` | `n_kv_heads` | must divide `n_heads` (GQA) |
 | 24 | `u32` | `hidden_dim` | FFN width; multiple of 32 |
 | 28 | `u32` | `vocab` | at least 3 (ids 1 and 2 are BOS and EOS) |
-| 32 | `u32` | `max_seq` | context length; sets the KV cache size |
+| 32 | `u32` | `max_seq` | longest context the model allows; the KV cache holds `--ctx` positions, at most this |
 | 36 | `f32` | `rope_theta` | > 0 |
 | 40 | `f32` | `norm_eps` | ≥ 0 |
 | 44 | `u32` | `wtype` | `1` = Q8_0, `2` = Q4_0 |

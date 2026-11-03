@@ -78,7 +78,7 @@ python3 tools/convert.py llama2c stories15M.bin stories15M.mlb --wtype q8
 build/avx2/ml_run stories15M.mlb -z tokenizer.bin -i "Once upon a time" -n 128 -T 0.8
 
 # Hugging Face Llama, Mistral, Qwen2, Qwen3, Gemma 2 or Gemma 3 (safetensors), and its tokenizer.json
-python3 tools/convert.py hf ./Llama-3.2-1B-Instruct llama.mlb --wtype q4 --q8 v,o,down --max-seq 4096
+python3 tools/convert.py hf ./Llama-3.2-1B-Instruct llama.mlb --wtype q4 --q8 v,o,down
 python3 tools/convert_tokenizer.py ./Llama-3.2-1B-Instruct/tokenizer.json llama.mlt
 build/avx2/ml_run llama.mlb -z llama.mlt --chat llama3 -t 4     # one message per line
 build/avx2/ml_run qwen.mlb -z qwen.mlt --chat qwen -t 4         # Qwen2.5 Instruct
