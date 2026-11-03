@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.7.0 — 2026-11-03
 
 ### Added
 
@@ -15,7 +15,6 @@
   default; `--api-key` (or `KRAFLA_API_KEY`) and `--cors` are optional. The
   release archives include it, and `tests/server_check.py` checks it over
   HTTP in every e2e run. See `docs/server.md`.
-
 - `--ctx N` for `ml_run`: the context length, which sizes the KV cache, the
   attention scratch and the RoPE tables at run time, from 1 to the file's
   `max_seq`. The default is `max_seq` capped at 4096, so a file converted at
@@ -24,7 +23,6 @@
   default); `ml_bench` sizes its state to the positions it runs, and
   `tools/perplexity.py` to each chunk. When a chat fills the context,
   `ml_run` says how far `--ctx` can raise it.
-
 - Zenodo DOI `10.5281/zenodo.23880653` (all versions): a badge in the README, `doi` in
   `CITATION.cff` and the BibTeX entries, and the site's structured data.
 - `.github/workflows/zenodo-doi.yml`, run by `release.yml` after publishing:
@@ -33,6 +31,9 @@
 
 ### Changed
 
+- `tools/convert.py --max-seq` is no longer needed to keep the KV cache small:
+  without it the file records the model's full context, and `--ctx` sizes the
+  cache at run time.
 - Workflows use the Node 24 versions of their actions (`actions/checkout@v5`,
   `actions/cache@v5`, `actions/upload-artifact@v6`,
   `softprops/action-gh-release@v3`); GitHub has deprecated Node 20 on its
