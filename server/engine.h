@@ -43,7 +43,8 @@ typedef int (*srv_emit_fn)(void *ud, const char *text, size_t n);
 ml_status srv_engine_init(srv_engine *e, ml_state *s, ml_tokenizer *tok);
 void srv_engine_free(srv_engine *e);
 /* Runs the prompt (1 to ctx-1 tokens), reusing the cached prefix it shares
- * with the previous request, then generates. The reply text goes to emit
+ * with the previous request (with linear-attention layers, only when the
+ * prompt continues all of it), then generates. The reply text goes to emit
  * piece by piece (if emit is set) and, whole, to reply. The logits, and so
  * the reply for a given seed, do not depend on what was cached. */
 ml_status srv_generate(srv_engine *e, const int *prompt, int np, const srv_request *r,

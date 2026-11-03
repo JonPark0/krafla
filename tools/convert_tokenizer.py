@@ -21,11 +21,15 @@ import sys
 
 SPM, BYTE_BPE = 1, 2
 ADDED, BYTE = 1, 2
-ADD_BOS, IGNORE_MERGES, PREPEND_FIRST, NFC, DIGITS1, GPT2, ISOLATE_DIGITS, NO_PREPEND = 1, 2, 4, 8, 16, 32, 64, 128
+ADD_BOS, IGNORE_MERGES, PREPEND_FIRST, NFC, DIGITS1, GPT2, ISOLATE_DIGITS, NO_PREPEND, MARKS = \
+    1, 2, 4, 8, 16, 32, 64, 128, 256
 SP = "▁"
 LLAMA3_REGEX = (r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}|"
                 r" ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+")
 QWEN2_REGEX = LLAMA3_REGEX.replace(r"\p{N}{1,3}", r"\p{N}")
+# Qwen3.5: combining marks go with the letters
+QWEN35_REGEX = (r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?[\p{L}\p{M}]+|\p{N}|"
+                r" ?[^\s\p{L}\p{M}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+")
 
 
 class Unsupported(Exception):
@@ -86,10 +90,12 @@ def detect(j):
                               "or ByteLevel with its GPT-2 regex")
         s, bl = pres
         rx = s["pattern"].get("Regex")
-        if rx not in (LLAMA3_REGEX, QWEN2_REGEX) or s.get("behavior") != "Isolated" or s.get("invert"):
-            raise Unsupported("pre-tokenizer regex is not the Llama 3 or Qwen2 one")
+        if rx not in (LLAMA3_REGEX, QWEN2_REGEX, QWEN35_REGEX) or s.get("behavior") != "Isolated" or s.get("invert"):
+            raise Unsupported("pre-tokenizer regex is not the Llama 3, Qwen2 or Qwen3.5 one")
         if rx == QWEN2_REGEX:
             flags |= DIGITS1
+        if rx == QWEN35_REGEX:
+            flags |= MARKS
         if bl.get("add_prefix_space") or bl.get("use_regex"):
             raise Unsupported("ByteLevel with add_prefix_space or its own regex")
         return BYTE_BPE, flags

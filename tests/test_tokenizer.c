@@ -90,7 +90,7 @@ static void test_limits(void) {
         fclose(f);
         TT_EQ_INT(ml_tokenizer_load(&t, tmp, 0), ML_E_FORMAT);
     }
-    buf[29] = 0x01;   /* unknown flag (0x100) */
+    buf[29] = 0x02;   /* unknown flag (0x200) */
     f = fopen(tmp, "wb");
     fwrite(buf, 1, n, f);
     fclose(f);
@@ -130,6 +130,27 @@ static void test_qwen2_flags(void) {
     const int na = ml_encode(&t, "naive cafe\xCC\x81", 1, 0, a, 16), nb = ml_encode(&t, "naive caf\xC3\xA9", 1, 0, b, 16);
     TT_ASSERT(na == nb && na > 0 && !memcmp(a, b, sizeof(int) * (size_t)na));
     check_ids(&t, "123", IDS(0, 18, 19, 20));
+    ml_tokenizer_free(&t);
+}
+
+/* Marks (\p{M}: Mn, Mc, Me) for Qwen3.5's pre-tokenizer, which keeps them
+ * with the letters; check_tokenizer.py compares a real Qwen3.5 tokenizer. */
+static void test_marks(void) {
+    TT_ASSERT(ml_uni_is_mark(0x301) && ml_uni_is_mark(0x93F) && ml_uni_is_mark(0x20DD) && ml_uni_is_mark(0xE01EF));
+    TT_ASSERT(!ml_uni_is_mark('a') && !ml_uni_is_mark(0x2FF) && !ml_uni_is_mark(0x905) && !ml_uni_is_mark(0x1F600));
+    TT_ASSERT(!ml_uni_is_letter(0x301) && ml_uni_is_letter(0x905));
+    ml_tokenizer t;
+    TT_EQ_INT(ml_tokenizer_load(&t, bpe_path, 0), ML_OK);
+    int a[32], b[32];
+    /* without marks a combining mark starts a new chunk; with them it joins the letters */
+    const int na = ml_encode(&t, "xx\xCC\x81yy", 0, 0, a, 32);
+    t.flags |= ML_TOKF_MARKS;
+    const int nb = ml_encode(&t, "xx\xCC\x81yy", 0, 0, b, 32);
+    TT_ASSERT(na > 0 && nb > 0);
+    char sa[64] = "", sb[64] = "";
+    for (int i = 0; i < na; i++) strcat(sa, ml_decode(&t, -1, a[i]));
+    for (int i = 0; i < nb; i++) strcat(sb, ml_decode(&t, -1, b[i]));
+    TT_ASSERT(!strcmp(sa, "xx\xCC\x81yy") && !strcmp(sb, sa));   /* the same bytes either way */
     ml_tokenizer_free(&t);
 }
 
@@ -216,6 +237,7 @@ int TT_ENTRY(int argc, char **argv) {
     TT_RUN(test_byte_bpe);
     TT_RUN(test_limits);
     TT_RUN(test_qwen2_flags);
+    TT_RUN(test_marks);
     TT_RUN(test_gpt2_flags);
     TT_RUN(test_llama2c);
     TT_RUN(test_chat_templates);

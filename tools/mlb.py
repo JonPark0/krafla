@@ -19,12 +19,20 @@ WTYPES = {"f32": 0, "q8": 1, "q4": 2}
 # magic .. rope scaling, q8 mask, qkv bias (80 bytes), head_dim, qk_norm,
 # rope attention factor, sliding window (96), per-layer flags present, local
 # RoPE theta (104), FFN activation, post-norms, embedding scale, attention
-# scale: 120 bytes
-_HDR = struct.Struct("<4sIIIIIIIIffIIIfffIIIIIfIIfIIffIff")
+# scale: 120 bytes; scales f16, attention and final soft-caps (132); rotary
+# dimensions, attention output gate, linear-attention key and value heads,
+# their head sizes and conv kernel size (Qwen3.5): 160 bytes
+_HDR = struct.Struct("<4sIIIIIIIIffIIIfffIIIIIfIIfIIffIffIIIIIII")
 ACTS = {"silu": 0, "gelu_tanh": 1}
 POST_NORM_KEYS = ("post_attn_norm", "post_ffn_norm")   # F32 [dim], after w3, when post_norms is set (Gemma 3)
-LAYER_SLIDING, LAYER_LOCAL_ROPE, LAYER_NO_ROPE = 1, 2, 4   # per-layer flag bits (Gemma 3, Qwen2 with some
-# sliding layers, SmolLM3's layers without RoPE)
+LAYER_SLIDING, LAYER_LOCAL_ROPE, LAYER_NO_ROPE, LAYER_LINEAR = 1, 2, 4, 8   # per-layer flag bits (Gemma 3,
+# Qwen2 with some sliding layers, SmolLM3's layers without RoPE, Qwen3.5's linear-attention layers)
+# A linear-attention (gated delta rule) layer holds, in this order, in place of wq..wo and what follows wo:
+# lqkv [2 * k_heads * k_dim + v_heads * v_dim, dim], lz [v_heads * v_dim, dim], lb and la [v_heads, dim]
+# (always Q8), then F32 lconv [conv channels, kernel], ldt and lalog [v_heads], lnorm [v_dim], and
+# lout [dim, v_heads * v_dim].
+LIN_KEYS = (("lqkv", "q"), ("lz", "q"), ("lb", "q"), ("la", "q"), ("lconv", "f"), ("ldt", "f"),
+            ("lalog", "f"), ("lnorm", "f"), ("lout", "q"))
 ROPE_TYPES = {None: 0, "llama3": 1, "linear": 2, "yarn": 3}
 LAYER_KEYS = ("attn_norm", "wq", "wk", "wv", "wo", "ffn_norm", "w1", "w2", "w3")
 BIAS_KEYS = ("bq", "bk", "bv")   # F32, after wo, when the header's qkv_bias is set (Qwen2)
@@ -60,7 +68,8 @@ QT = namedtuple("QT", "type q d shape")   # quantized tensor as stored
 # Q4 models may keep these matrix classes in Q8 (header q8_mask, offset 72).
 Q8_CLASSES = {"emb": 1, "cls": 2, "qk": 4, "v": 8, "o": 16, "up": 32, "down": 64}
 _CLASS_OF = {"tok_emb": "emb", "wcls": "cls", "wq": "qk", "wk": "qk", "wv": "v", "wo": "o",
-             "w1": "up", "w3": "up", "w2": "down"}
+             "w1": "up", "w3": "up", "w2": "down", "wg": "qk", "lqkv": "qk", "lz": "v", "lout": "o"}
+ALWAYS_Q8 = ("la", "lb")   # the decay and update gates of linear attention: small, and sensitive
 
 
 def q8_mask(classes):
@@ -75,16 +84,35 @@ def q8_mask(classes):
 
 def matrix_type(key, wtype, mask, shared=False):
     """Storage type (WTYPES value) of matrix `key` (tok_emb, wq, ..., wcls)."""
+    if key in ALWAYS_Q8:
+        return WTYPES["q8"]
     bits = Q8_CLASSES[_CLASS_OF[key]]
     if shared and key == "tok_emb":
         bits |= Q8_CLASSES["cls"]   # the shared table is also the classifier
     return WTYPES["q8"] if wtype == WTYPES["q8"] or mask & bits else WTYPES["q4"]
 
 
+def rot_dim(cfg):
+    """Dimensions of each head that RoPE rotates (the first ones): cfg["rot_dim"], or head_dim."""
+    return cfg.get("rot_dim") or head_dim(cfg)
+
+
+def layer_linear(cfg, layer):
+    """Whether layer `layer` is a linear-attention (gated delta rule) layer."""
+    flags = cfg.get("layer_flags")
+    return flags is not None and bool(flags[layer] & LAYER_LINEAR)
+
+
+def lin_dims(cfg):
+    """-> (k_heads, v_heads, k_dim, v_dim, conv kernel, conv channels, value width) of linear attention."""
+    nk, nv, dk, dv, kc = (cfg.get(k) or 0 for k in ("lin_k_heads", "lin_v_heads", "lin_k_dim", "lin_v_dim", "lin_conv"))
+    return nk, nv, dk, dv, kc, 2 * nk * dk + nv * dv, nv * dv
+
+
 def rope_inv_freq(cfg):
-    """float64[head_dim/2] RoPE inverse frequencies, scaled as cfg["rope_scaling"]
+    """float64[rot_dim/2] RoPE inverse frequencies, scaled as cfg["rope_scaling"]
     says (llama3, linear or yarn; the formulas of transformers and the C loader)."""
-    hd = head_dim(cfg)
+    hd = rot_dim(cfg)
     inv = 1.0 / float(cfg["rope_theta"]) ** (np.arange(0, hd, 2, dtype=np.float64) / hd)
     rs = cfg.get("rope_scaling")
     if not rs:
@@ -303,8 +331,20 @@ def _order(cfg, w):
     """Yields (name, kind, array) in file order; kind 'q' = matrix in wtype, 'f' = F32."""
     yield "tok_emb", "q", w["tok_emb"]
     for i, layer in enumerate(w["layers"]):
+        if layer_linear(cfg, i):
+            yield f"layers.{i}.attn_norm", "f", layer["attn_norm"]
+            for k, kind in LIN_KEYS:
+                yield f"layers.{i}.{k}", kind, layer[k]
+            for k in ("ffn_norm", "w1", "w2", "w3"):
+                yield f"layers.{i}.{k}", ("f" if k.endswith("norm") else "q"), layer[k]
+            if cfg.get("post_norms"):
+                for b in POST_NORM_KEYS:
+                    yield f"layers.{i}.{b}", "f", layer[b]
+            continue
         for k in LAYER_KEYS:
             yield f"layers.{i}.{k}", ("f" if k.endswith("norm") else "q"), layer[k]
+            if k == "wo" and cfg.get("attn_gate"):
+                yield f"layers.{i}.wg", "q", layer["wg"]
             if k == "wo" and cfg.get("qkv_bias"):
                 for b in BIAS_KEYS:
                     yield f"layers.{i}.{b}", "f", layer[b]
@@ -328,6 +368,15 @@ def _check_cfg(cfg):
         raise ValueError("layers with the local RoPE base need rope_local_theta")
     if cfg["n_heads"] * head_dim(cfg) % QK:
         raise ValueError(f"n_heads * head_dim = {cfg['n_heads'] * head_dim(cfg)} must be a multiple of {QK}")
+    if rot_dim(cfg) % 2 or rot_dim(cfg) > head_dim(cfg):
+        raise ValueError(f"rot_dim {rot_dim(cfg)} must be even and at most head_dim")
+    if flags is not None and any(f & LAYER_LINEAR for f in flags):
+        nk, nv, dk, dv, kc, _, vw = lin_dims(cfg)
+        if not (nk and nv and dk and dv and kc) or nv % nk or vw % QK:
+            raise ValueError("linear attention needs k/v heads (v a multiple of k), head sizes and a conv "
+                             f"kernel, with v_heads * v_dim a multiple of {QK}")
+        if any(f & LAYER_LINEAR and f & ~LAYER_LINEAR for f in flags):
+            raise ValueError("a linear-attention layer takes no other flags")
 
 
 def write_mlb(path, cfg, w, wtype, q8=(), imatrix=None, scales="f32", q4_rule="fit"):
@@ -357,7 +406,9 @@ def write_mlb(path, cfg, w, wtype, q8=(), imatrix=None, scales="f32", q4_rule="f
                     int(cfg.get("layer_flags") is not None), float(cfg.get("rope_local_theta") or 0.0),
                     ACTS[cfg.get("act") or "silu"], int(bool(cfg.get("post_norms"))),
                     float(cfg.get("embed_scale") or 0.0), float(cfg.get("attn_scale") or 0.0), int(f16),
-                    float(cfg.get("attn_softcap") or 0.0), float(cfg.get("final_softcap") or 0.0))
+                    float(cfg.get("attn_softcap") or 0.0), float(cfg.get("final_softcap") or 0.0),
+                    rot_dim(cfg) if rot_dim(cfg) != head_dim(cfg) else 0, int(bool(cfg.get("attn_gate"))),
+                    *lin_dims(cfg)[:5])
     layout = []
     with open(path, "wb") as f:
         f.write(hdr.ljust(HEADER_SIZE, b"\0"))
@@ -389,7 +440,8 @@ def write_mlb(path, cfg, w, wtype, q8=(), imatrix=None, scales="f32", q4_rule="f
 # magic, version, n_layers, dim, hidden_dim, wo input size if not dim (else 0),
 # tokens, classifier tokens
 _IMAT = struct.Struct("<4sIIIIIQQ")
-_IMAT_INPUT = {"wq": "qkv", "wk": "qkv", "wv": "qkv", "wo": "wo", "w1": "ffn", "w3": "ffn", "w2": "down"}
+_IMAT_INPUT = {"wq": "qkv", "wk": "qkv", "wv": "qkv", "wo": "wo", "w1": "ffn", "w3": "ffn", "w2": "down",
+               "wg": "qkv", "lqkv": "qkv", "lz": "qkv", "lb": "qkv", "la": "qkv", "lout": "wo"}
 
 
 def read_imatrix(path, cfg):
@@ -445,7 +497,9 @@ def read_mlb(path):
     cfg = dict(zip(keys, f[1:13]))
     (rtype, rf, rlo, rhi, rorig, cfg["q8_mask"], cfg["qkv_bias"], cfg["head_dim"], cfg["qk_norm"],
      rattn, cfg["sliding_window"], has_flags, cfg["rope_local_theta"], act, cfg["post_norms"],
-     cfg["embed_scale"], cfg["attn_scale"], f16, cfg["attn_softcap"], cfg["final_softcap"]) = f[13:]
+     cfg["embed_scale"], cfg["attn_scale"], f16, cfg["attn_softcap"], cfg["final_softcap"], rot, gate,
+     cfg["lin_k_heads"], cfg["lin_v_heads"], cfg["lin_k_dim"], cfg["lin_v_dim"], cfg["lin_conv"]) = f[13:]
+    cfg["rot_dim"], cfg["attn_gate"] = rot or None, gate
     cfg["scales"] = "f16" if f16 else "f32"
     cfg["act"] = {v: k for k, v in ACTS.items()}[act]
     rname = {v: k for k, v in ROPE_TYPES.items()}[rtype]
@@ -459,9 +513,12 @@ def read_mlb(path):
     dim, hid, voc = cfg["dim"], cfg["hidden_dim"], cfg["vocab"]
     hd = head_dim(cfg)
     qd, kv = hd * cfg["n_heads"], hd * cfg["n_kv_heads"]
+    nk, nv, dk, dv, kc, conv, vw = lin_dims(cfg)
     shapes = {"tok_emb": (voc, dim), "wq": (qd, dim), "wk": (kv, dim), "wv": (kv, dim),
               "wo": (dim, qd), "w1": (hid, dim), "w2": (dim, hid), "w3": (hid, dim),
-              "wcls": (voc, dim)}
+              "wcls": (voc, dim), "wg": (qd, dim), "lqkv": (conv, dim), "lz": (vw, dim), "lb": (nv, dim),
+              "la": (nv, dim), "lout": (dim, vw)}
+    fshapes = {"lconv": (conv, kc), "ldt": (nv,), "lalog": (nv,), "lnorm": (dv,)}
     off = HEADER_SIZE
 
     def take(dtype, count):
@@ -481,10 +538,23 @@ def read_mlb(path):
 
     cfg["layer_flags"] = [int(v) for v in take(np.uint8, cfg["n_layers"])] if has_flags else None
     t = {"tok_emb": mat("tok_emb"), "layers": []}
-    for _ in range(cfg["n_layers"]):
+    for li in range(cfg["n_layers"]):
         layer = {}
+        if layer_linear(cfg, li):
+            layer["attn_norm"] = take(np.float32, dim)
+            for k, kind in LIN_KEYS:
+                layer[k] = mat(k) if kind == "q" else take(np.float32, int(np.prod(fshapes[k]))).reshape(fshapes[k])
+            layer["ffn_norm"] = take(np.float32, dim)
+            for k in ("w1", "w2", "w3"):
+                layer[k] = mat(k)
+            if cfg["post_norms"]:
+                layer["post_attn_norm"], layer["post_ffn_norm"] = take(np.float32, dim), take(np.float32, dim)
+            t["layers"].append(layer)
+            continue
         for k in LAYER_KEYS:
             layer[k] = take(np.float32, dim) if k.endswith("norm") else mat(k)
+            if k == "wo" and cfg["attn_gate"]:
+                layer["wg"] = mat("wg")
             if k == "wo" and cfg["qkv_bias"]:
                 layer["bq"], layer["bk"], layer["bv"] = take(np.float32, qd), take(np.float32, kv), take(np.float32, kv)
             if k == "wo" and cfg["qk_norm"]:

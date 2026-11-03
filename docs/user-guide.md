@@ -183,9 +183,15 @@ python3 tools/convert.py hf ./TinyLlama-1.1B model.mlb --wtype q4
   converter refuses other types (dynamic, longrope) instead of writing a model
   that would compute wrong outputs.
 - **Architectures:** `model_type` must be `llama`, `mistral`, `qwen2`, `qwen3`,
-  `smollm3`, `gemma2`, `gemma3_text` (Gemma 3 1B) or `gemma3` (Gemma 3 4B, 12B
-  and 27B). SmolLM3 leaves out RoPE in every fourth layer (`no_rope_layers`);
-  the converter marks those layers.
+  `qwen3_5` (Qwen3.5 and Qwen3.6, dense), `smollm3`, `gemma2`, `gemma3_text`
+  (Gemma 3 1B) or `gemma3` (Gemma 3 4B, 12B and 27B). SmolLM3 leaves out RoPE
+  in every fourth layer (`no_rope_layers`); the converter marks those layers.
+  Qwen3.5 puts three linear-attention layers (the gated delta rule) before
+  every attention layer, gates the attention output and rotates a quarter of
+  each head; the converter takes its language model and leaves out the vision
+  tower and the multi-token prediction head. Its `(1 + w)` norm weights are
+  stored with the 1 added, and the linear layers' `b` and `a` projections stay
+  in Q8_0 in every file.
   The `gemma3` checkpoints are image-text models: the converter takes the text
   model and leaves the vision tower out. Biases are accepted only on Qwen2's
   q, k and v projections. Supported features: a `head_dim` other than
@@ -230,6 +236,7 @@ These kinds are supported, and they encode exactly as the Hugging Face
 | SentencePiece-style BPE with byte fallback | Llama 2, TinyLlama, Mistral, Vicuna, Gemma 3 | spaces become `▁` (Gemma adds none before the text), characters outside the vocabulary become `<0xXX>` byte tokens |
 | byte-level BPE with the Llama 3 pre-tokenizer | Llama 3, 3.1, 3.2 | text is split by the Llama 3 regex (letters, numbers, contractions, white space) before merging |
 | byte-level BPE with NFC and the Qwen2 pre-tokenizer | Qwen2, Qwen2.5, Qwen3 | text is normalized to NFC, then split as Llama 3 but with one digit per number chunk |
+| byte-level BPE with NFC and the Qwen3.5 pre-tokenizer | Qwen3.5, Qwen3.6 | as Qwen2, with combining marks (`\p{M}`) kept with the letters |
 | byte-level BPE with the GPT-2 pre-tokenizer | SmolLM, SmolLM2, GPT-2 | text is split by the GPT-2 regex, after splitting off every digit if the tokenizer does (SmolLM2) |
 
 The converter refuses anything else (WordPiece, Unigram, other normalizers or
@@ -266,7 +273,9 @@ The capital of Germany is Berlin.
 | `qwen` | Qwen2.5 Instruct; without `--system` it uses Qwen's default system prompt | `<|im_end|>` |
 | `smollm` | SmolLM2 Instruct; without `--system` it uses SmolLM2's default system prompt | `<|im_end|>` |
 | `gemma` | Gemma 3 Instruct; `--system` goes at the start of the first user turn | `<end_of_turn>` |
-| `chatml` | Qwen3 and other ChatML models; a system turn only with `--system` | `<|im_end|>` |
+| `chatml` | Qwen3, SmolLM3 and other ChatML models; a system turn only with `--system` | `<|im_end|>` |
+| `qwen3.5` | Qwen3.5 and Qwen3.6 with reasoning: ChatML, the reply opened with `<think>` (the default of their 4B and larger templates) | `<|im_end|>` |
+| `qwen3.5-nothink` | Qwen3.5 and Qwen3.6 without reasoning: ChatML, the reply after an empty think block (the default of the 0.8B and 2B templates) | `<|im_end|>` |
 
 Qwen3 writes a `<think>...</think>` section before it answers. Ending a
 message with `/no_think` asks it to skip the reasoning. The KV cache keeps
@@ -430,7 +439,7 @@ build/avx2/ml_run model.mlb --tokens 1,450,3681 --dump-logits l.f32
 | `--pack-cache` | Save the packed weights next to the model (`MODEL.pk<G>`, G = pack group) and map them from there on later runs instead of packing again. The cache is checked against the model and the build's layout and rewritten when stale. |
 | `--no-pack` | Keep weights row-major instead of repacking them for the packed kernels. Uses less memory during load, but runs slower. |
 | `--profile` | Print the share of forward-pass time per stage (qkv, attention, wo, ffn, classifier, other). |
-| `--chat TEMPLATE` | Chat with the model: `llama3`, `zephyr`, `llama2`, `qwen`, `smollm`, `chatml` or `gemma`, see [Chat](#chat). Needs `-z`. |
+| `--chat TEMPLATE` | Chat with the model: `llama3`, `zephyr`, `llama2`, `qwen`, `smollm`, `chatml`, `gemma`, `qwen3.5` or `qwen3.5-nothink`, see [Chat](#chat). Needs `-z`. |
 | `--system TEXT` | System prompt for `--chat`. |
 | `--eos ID` | Stop as soon as `ID` is generated. Without it, a run with `-z` stops at the tokenizer's BOS or EOS, and a run without `-z` uses every `-n` position. |
 
@@ -496,8 +505,16 @@ never changes the output: `-t N` produces logits bit-identical to `-t 1`.
   is `--ctx`. All size
   arithmetic is overflow-checked, so on 32-bit ARMv7 an oversized model fails
   with `out of memory` instead of crashing.
-- **Architecture:** Llama-family decoders (Llama, Mistral, Qwen2, Qwen3) and
-  Gemma 2 and 3: RMSNorm, SwiGLU or GELU, GQA, RoPE, biases only on the q, k
-  and v projections (Qwen2), optional per-head q/k RMSNorm (Qwen3), block
-  output norms and soft-capping (Gemma), and a sliding window and a second
-  RoPE base for chosen layers. `tools/convert.py` refuses other architectures.
+- **Architecture:** Llama-family decoders (Llama, Mistral, Qwen2, Qwen3,
+  SmolLM3), Gemma 2 and 3, and Qwen3.5's hybrid of linear attention and
+  attention: RMSNorm, SwiGLU or GELU, GQA, RoPE (on part of each head, or
+  none in chosen layers), biases only on the q, k and v projections (Qwen2),
+  optional per-head q/k RMSNorm (Qwen3), block output norms and soft-capping
+  (Gemma), a sliding window and a second RoPE base for chosen layers, and the
+  gated delta rule with a gated attention output (Qwen3.5).
+  `tools/convert.py` refuses other architectures, including mixture of
+  experts (Qwen3.5 35B-A3B and larger).
+- **Linear attention:** a linear-attention layer keeps a fixed state instead
+  of a KV cache, which cannot be rewound: a run that does not continue the
+  last one starts over from position 0. `ml_server` reuses a previous request
+  only when the new prompt continues all of it.

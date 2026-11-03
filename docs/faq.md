@@ -67,7 +67,8 @@ Pi yet, so there are no Raspberry Pi speed numbers.
 ## Which models does it run?
 
 Llama 2, Llama 3/3.1/3.2, TinyLlama, SmolLM2, SmolLM3, Mistral, Qwen2/Qwen2.5,
-Qwen3, Gemma 2 and Gemma 3 (the text model, 1B to 27B), from their Hugging Face
+Qwen3, Qwen3.5 and Qwen3.6 (dense, the text model), Gemma 2 and Gemma 3 (the
+text model, 1B to 27B), from their Hugging Face
 safetensors files, plus llama2.c checkpoints. `tools/convert.py` converts a
 checkpoint to the `.mlb` format and `tools/convert_tokenizer.py` its
 `tokenizer.json`. TinyLlama 1.1B, Llama 3.2 1B, Qwen2.5 0.5B, Qwen3 0.6B,
@@ -139,6 +140,6 @@ binaries, MSVC through CMake). Other systems are untested.
 ## What is not supported?
 
 Other tokenizers (WordPiece, Unigram), RoPE scaling of the dynamic and
-longrope kinds, partial rotary embeddings (Phi), mixture-of-experts models,
+longrope kinds, Phi, mixture-of-experts models (including Qwen3.5 35B-A3B),
 image input, K-quant formats, GPUs and AMX. The full list is under
 [Status](https://github.com/JonPark0/krafla#status) in the README.

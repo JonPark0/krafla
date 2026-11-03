@@ -29,13 +29,21 @@ typedef struct {
     int rope_type, rope_orig_max_seq;
     float rope_factor, rope_low_freq_factor, rope_high_freq_factor;
     float rope_attn_factor;   /* yarn: factor on cos and sin (offset 88) */
+    int rot_dim;        /* leading dimensions of each head that RoPE rotates; head_dim if 0 in the header (132) */
+    int attn_gate;      /* attention output multiplied by sigmoid(wg x) (136; Qwen3.5) */
+    /* linear attention, gated delta rule (140..159; Qwen3.5): key and value
+     * heads, their sizes, the causal conv kernel; derived: conv channels
+     * (2 * nk * dk + nv * dv), value width (nv * dv), linear layers */
+    int lin_nk, lin_nv, lin_dk, lin_dv, lin_conv;
+    int lin_channels, lin_vdim, n_linear;
 } ml_config;
 
 enum { ML_ROPE_NONE = 0, ML_ROPE_LLAMA3 = 1, ML_ROPE_LINEAR = 2, ML_ROPE_YARN = 3 };
 /* Per-layer flags: the layer uses the sliding window; the local RoPE base;
- * no RoPE at all (NoPE, SmolLM3). Without per-layer flags the window applies
- * to every layer. */
-enum { ML_LAYER_SLIDING = 1, ML_LAYER_LOCAL_ROPE = 2, ML_LAYER_NO_ROPE = 4, ML_LAYER_ALL = 7 };
+ * no RoPE at all (NoPE, SmolLM3); linear attention in place of attention
+ * (Qwen3.5; alone). Without per-layer flags the window applies to every layer. */
+enum { ML_LAYER_SLIDING = 1, ML_LAYER_LOCAL_ROPE = 2, ML_LAYER_NO_ROPE = 4, ML_LAYER_LINEAR = 8,
+       ML_LAYER_ALL = 15 };
 enum { ML_ACT_SILU = 0, ML_ACT_GELU_TANH = 1 };
 enum { ML_Q8M_EMB = 1, ML_Q8M_CLS = 2, ML_Q8M_QK = 4, ML_Q8M_V = 8, ML_Q8M_O = 16,
        ML_Q8M_UP = 32, ML_Q8M_DOWN = 64, ML_Q8M_ALL = 127 };
@@ -49,7 +57,18 @@ typedef struct {
     int window;          /* positions attended at most; 0: all */
     int local_rope;      /* uses the RoPE tables of rope_local_theta */
     int no_rope;         /* queries and keys are not rotated (NoPE) */
+    ml_qtensor wg;       /* attention output gate [q_dim][dim] (cfg.attn_gate) */
+    /* linear-attention layers (linear set) hold these instead of wq..wo:
+     * lqkv [channels][dim], lz [vdim][dim], lb, la [nv][dim], lout [dim][vdim];
+     * F32 lconv [channels][conv], ldt, lalog [nv], lnorm [dv] */
+    int linear;
+    ml_qtensor lqkv, lz, lb, la, lout;
+    const float *lconv, *ldt, *lalog, *lnorm;
 } ml_layer;
+
+/* The quantized matrices of layer L (rows > 0), at most ML_LAYER_MATS. */
+#define ML_LAYER_MATS 9
+int ml_layer_mats(ml_layer *L, ml_qtensor **out);
 
 typedef struct {
     ml_config cfg;

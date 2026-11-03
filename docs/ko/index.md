@@ -32,7 +32,7 @@ NEON부터 AVX-512 VNNI·SVE까지 지원합니다.
 - **낮은 Q4 퍼플렉서티:** 블록마다 스케일을 맞춰 Qwen2.5 0.5B의 Q4_0 퍼플렉서티가 15.1로, llama.cpp Q4_0의
   15.8–15.9보다 낮습니다. Q8은 F32 기준과 일치합니다.
 - **결정적 출력:** 스레드 수와 프롬프트 배치 크기를 바꿔도 출력이 비트 단위까지 같습니다.
-- **모델:** Llama 2/3, Mistral, Qwen2.5, Qwen3, SmolLM2, SmolLM3, Gemma 2, Gemma 3의 Hugging Face safetensors 파일을
+- **모델:** Llama 2/3, Mistral, Qwen2.5, Qwen3, Qwen3.5/3.6, SmolLM2, SmolLM3, Gemma 2, Gemma 3의 Hugging Face safetensors 파일을
   토크나이저·대화 템플릿과 함께 변환해 씁니다.
 
 ## llama.cpp 대비 디코딩 속도

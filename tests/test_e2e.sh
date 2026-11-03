@@ -37,9 +37,10 @@ $RUN $B/ml_run $M/bias_q4.mlb --tokens $TOKENS --dump-logits $T/bias.f32 \
 # head_dim other than dim / n_heads with per-head q/k norm (Qwen3), a sliding
 # window, yarn RoPE scaling, per-layer windows and RoPE bases, the rest of
 # Gemma 3 (GELU, post-norms, embedding and attention scales), Gemma 2's
-# soft-capped scores and logits, layers without RoPE (SmolLM3):
+# soft-capped scores and logits, layers without RoPE (SmolLM3), Qwen3.5's
+# linear-attention layers, gated attention and partial RoPE:
 # reference, row-major, batched prefill
-for mm in qk_q4 swa_q8 yarn_q4 lwin_q8 gemma_q4 g2_q8 nope_q4; do
+for mm in qk_q4 swa_q8 yarn_q4 lwin_q8 gemma_q4 g2_q8 nope_q4 hyb_q8 hyb_q4; do
     $RUN $B/ml_run $M/$mm.mlb --tokens $TOKENS --dump-logits $T/$mm.f32 \
         && python3 tools/ref_forward.py $M/$mm.mlb --tokens $TOKENS --out $T/$mm.ref.f32 \
         && python3 tests/compare_logits.py $T/$mm.f32 $T/$mm.ref.f32 96 1e-3 >/dev/null \
@@ -95,6 +96,26 @@ for bad_ctx in "--ctx 149" "--ctx 161" "--ctx 0" "--ctx"; do
     $RUN $B/ml_run $M/ctx_q4.mlb --tokens $CTX --dump-logits $T/ctx.bad.f32 $bad_ctx >/dev/null 2>&1
     [ $? -eq 2 ] && ok || bad "ml_run $bad_ctx should exit 2"
 done
+
+# linear attention over 150 positions: threads and batch sizes give the same
+# logits bit for bit; against the reference, the 5% criterion above (a Q8
+# rounding flip carries on in the recurrent state)
+$RUN $B/ml_run $M/hybl_q4.mlb --tokens $CTX --dump-logits $T/hybl.f32 \
+    && $RUN $B/ml_run $M/hybl_q4.mlb --tokens $CTX --dump-logits $T/hybl.t3.f32 -t 3 \
+    && $RUN $B/ml_run $M/hybl_q4.mlb --tokens $CTX --dump-logits $T/hybl.b1.f32 --batch 1 \
+    && $RUN $B/ml_run $M/hybl_q4.mlb --tokens $CTX --dump-logits $T/hybl.b5.f32 --batch 5 -t 4 \
+    && cmp -s $T/hybl.f32 $T/hybl.t3.f32 && cmp -s $T/hybl.f32 $T/hybl.b1.f32 && cmp -s $T/hybl.f32 $T/hybl.b5.f32 \
+    && ok || bad "linear attention: logits depend on threads or batch size"
+for kv in f32 q8; do
+    python3 tools/ref_forward.py $M/hybl_q4.mlb --tokens $CTX --out $T/hybl.$kv.ref.f32 --kv $kv \
+        && $RUN $B/ml_run $M/hybl_q4.mlb --tokens $CTX --dump-logits $T/hybl.$kv.f32 --kv $kv \
+        && python3 tests/compare_logits.py $T/hybl.$kv.f32 $T/hybl.$kv.ref.f32 96 5e-2 --any-argmax >/dev/null \
+        && ok || bad "linear attention, 150 positions, --kv $kv"
+done
+# a generation that continues the linear states equals one from scratch
+$RUN $B/ml_run $M/hyb_q8.mlb -z $TOK -i "abcdefghij" -n 24 -T 0 --batch 1 > $T/hg1.txt 2>/dev/null \
+    && $RUN $B/ml_run $M/hyb_q8.mlb -z $TOK -i "abcdefghij" -n 24 -T 0 > $T/hg.txt 2>/dev/null \
+    && cmp -s $T/hg1.txt $T/hg.txt && ok || bad "hybrid generation differs with batched prefill"
 
 # builds with packed kernels must actually pack (Q4 is packed by every one)
 G=$($RUN $B/ml_run --help 2>&1 | sed -n 's/^pack group: \([0-9]*\).*/\1/p')

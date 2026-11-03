@@ -52,12 +52,20 @@ The first lines of the output name the kernel each op resolved to, for example
 - **Context limit:** generation stops at `--ctx` (default `max_seq`, at most
   4096), and `--dump-logits` with more tokens than that exits with code 2, as
   does a `--ctx` above `max_seq`. A shorter `--ctx` gives the same logits.
+- **Linear attention (Qwen3.5):** random hybrid models (`hyb_q8`, `hyb_q4`)
+  match `tools/ref_forward.py` within 1e-3 over 16 positions, packed and
+  row-major; over 150 positions (`hybl_q4`, past the size where the delta
+  rule splits across threads) `-t 3`, `--batch 1` and `--batch 5` give the
+  same logits bit for bit, the F32 and Q8 caches stay within the 5% criterion,
+  and a generation equals one prefilled token by token.
 - **Server:** `tests/server_check.py` starts `ml_server` on a random port and
   checks every endpoint over HTTP: a greedy chat reply equals `ml_run --chat`'s,
   streamed deltas add up to the same reply, a repeated or multi-turn request
   gets the same reply whatever the cache held, stop strings cut the reply,
   errors come in OpenAI's format, `Expect: 100-continue` works, a client that
-  leaves mid-stream does not stop the server, and an API key is enforced. With
+  leaves mid-stream does not stop the server, a model with linear attention
+  reuses only a continued request and replies the same either way, and an API
+  key is enforced. With
   the `openai` package installed, its client is tried too.
 - **Threads:** `-t 3/4/7` give logits identical to `-t 1`, and `ml_run` reports
   the thread count it used.

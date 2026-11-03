@@ -47,7 +47,7 @@ static const char USAGE[] =
     "                   missing) for tools/convert.py --imatrix; run on text like the model's use\n"
     "  --chat TEMPLATE  chat with the model: llama3, zephyr (TinyLlama), llama2 (also Mistral),\n"
     "                   chatml, qwen or smollm (ChatML with Qwen2.5's or SmolLM2's default\n"
-    "                   system prompt), gemma;\n"
+    "                   system prompt), gemma, qwen3.5 or qwen3.5-nothink (reasoning on or off);\n"
     "                   one turn per stdin line, or the single turn -i; -n caps each reply\n"
     "  --system TEXT    system prompt for --chat\n"
     "  -h, --help       show this help\n";
