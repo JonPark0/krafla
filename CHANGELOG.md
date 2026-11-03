@@ -1,5 +1,33 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Qwen3.5 and Qwen3.6 (dense): linear-attention layers with the gated delta
+  rule (`ops/delta.c`; a causal convolution and a fixed state per head in
+  place of a KV cache, so their memory does not grow with the context),
+  attention layers with a gated output and RoPE on part of each head, and
+  their tokenizer, which keeps combining marks with the letters
+  (`ML_TOKF_MARKS`, with a Unicode mark table). The KV cache now covers
+  attention layers only. New header fields at offsets 132–159 and layer flag
+  bit 3; `tools/convert.py` reads `model_type` `qwen3_5` (the language model
+  of the image-text checkpoints, without the multi-token prediction head), and
+  `tools/ref_forward.py` and `tools/gen_random.py` follow. Against llama.cpp
+  on the same machine (4 threads, AVX-512 VNNI): Qwen3.5 0.8B Q8_0 perplexity
+  15.80 against 15.79, decoding 1.28× and prefill 1.55× faster; its Q4_0 18.41
+  against 18.95 in a 24% smaller file, decoding 1.69× and prefill 1.97×
+  faster; Qwen3.5 4B Q8_0 8.18 against 8.15, prefill 1.7× faster.
+- Chat templates `qwen3.5` (the reply opens with `<think>`) and
+  `qwen3.5-nothink` (an empty think block), for `ml_run` and `ml_server`.
+- `scripts/hf_models.json`: Qwen3.5 0.8B, 2B, 4B and 9B, to publish once a
+  release includes Qwen3.5 support.
+
+### Changed
+
+- `ml_server` reuses the previous request on a model with linear attention
+  only when the prompt continues all of it: the state cannot be cut back.
+
 ## 0.8.0 — 2026-11-03
 
 ### Added

@@ -43,4 +43,17 @@ void ml_softcap_rows(float *x, size_t ld, int rows, int n, float cap);
 void ml_attention_batch(ml_pool *pool, float *out, const float *q, const ml_kv_layer *kv, float *att_scratch,
                         int8_t *qq, float *qd, const ml_config *cfg, int pos0, int n);
 
+/* One linear-attention layer (gated delta rule, Qwen3.5) and its state: the
+ * conv window [channels][conv - 1] and the recurrent state [nv][dk][dv]. */
+typedef struct {
+    const ml_config *c;
+    const ml_layer *L;
+    float *conv, *S;
+} ml_delta_layer;
+/* n tokens in order: qkv [n][channels] (the projections, overwritten), z
+ * [n][vdim], b and a [n][nv] -> out [n][vdim] (before lout). scratch: 3 * dv
+ * floats per pool thread. See ops/delta.c. */
+void ml_delta_run(ml_pool *pool, const ml_delta_layer *d, float *qkv, const float *z, const float *b, const float *a,
+                  float *out, float *scratch, int n);
+
 #endif

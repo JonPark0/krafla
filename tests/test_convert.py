@@ -465,6 +465,81 @@ def test_hf_smollm3_nope(tmp_path):
         assert np.abs(ref_forward.forward(rot, t, [1, 7, 3, 9]) - ref)[1:].max() > 1e-3 * np.abs(ref).max()
 
 
+def test_hf_qwen35(tmp_path):
+    """Qwen3.5: an image-text config with text_config, linear-attention and
+    attention layers, q_proj holding each head's query then its gate, RoPE on
+    the first rot_dim dimensions, (1 + w) norms, a plain gated-norm weight and
+    a [channels, 1, kernel] conv. Converting the Hugging Face layout back must
+    give the weights it was made from, exactly; the mtp head is ignored."""
+    nh, nkv, hd, rd = 4, 2, 16, 8
+    cfg, w = gen_random.generate(dict(SMALL, n_layers=4, head_dim=hd, qk_norm=1, attn_gate=1, rot_dim=rd,
+                                      lin_k_heads=2, lin_v_heads=4, lin_k_dim=16, lin_v_dim=16, lin_conv=4,
+                                      layer_flags=[mlb.LAYER_LINEAR, 0, mlb.LAYER_LINEAR, 0]), seed=3)
+    dim = cfg["dim"]
+
+    def to_hf(m, n):   # interleaved pairs -> rotate_half in the first rd rows of each head
+        m = np.asarray(m, np.float32).reshape(n, hd, -1)
+        r = m[:, :rd].reshape(n, rd // 2, 2, -1).transpose(0, 2, 1, 3).reshape(n, rd, -1)
+        return np.concatenate([r, m[:, rd:]], axis=1).reshape(n * hd, -1)
+
+    p, t = "model.language_model.", {}
+    put = lambda name, a: t.__setitem__(name, ("F32", np.ascontiguousarray(a, np.float32)))
+    put(p + "embed_tokens.weight", w["tok_emb"])
+    put(p + "norm.weight", w["final_norm"] - 1)
+    put("mtp.fc.weight", np.zeros((dim, 2 * dim)))
+    for i, L in enumerate(w["layers"]):
+        q = f"{p}layers.{i}."
+        put(q + "input_layernorm.weight", L["attn_norm"] - 1)
+        put(q + "post_attention_layernorm.weight", L["ffn_norm"] - 1)
+        for a, b in (("gate_proj", "w1"), ("down_proj", "w2"), ("up_proj", "w3")):
+            put(q + f"mlp.{a}.weight", L[b])
+        if i % 2 == 0:
+            a = q + "linear_attn."
+            for name, k in (("in_proj_qkv", "lqkv"), ("in_proj_z", "lz"), ("in_proj_b", "lb"), ("in_proj_a", "la"),
+                            ("out_proj", "lout")):
+                put(a + name + ".weight", L[k])
+            put(a + "conv1d.weight", np.asarray(L["lconv"])[:, None, :])
+            put(a + "dt_bias", L["ldt"])
+            put(a + "A_log", L["lalog"])
+            put(a + "norm.weight", L["lnorm"])
+        else:
+            a = q + "self_attn."
+            qg = np.stack([to_hf(L["wq"], nh).reshape(nh, hd, dim), np.asarray(L["wg"]).reshape(nh, hd, dim)], axis=1)
+            put(a + "q_proj.weight", qg.reshape(2 * nh * hd, dim))
+            put(a + "k_proj.weight", to_hf(L["wk"], nkv))
+            put(a + "v_proj.weight", L["wv"])
+            put(a + "o_proj.weight", L["wo"])
+            put(a + "q_norm.weight", to_hf(np.asarray(L["q_norm"])[:, None], 1)[:, 0] - 1)
+            put(a + "k_norm.weight", to_hf(np.asarray(L["k_norm"])[:, None], 1)[:, 0] - 1)
+    d = tmp_path / "q35"
+    d.mkdir()
+    _write_safetensors(str(d / "model.safetensors"), t)
+    tc = {"hidden_size": dim, "intermediate_size": cfg["hidden_dim"], "num_hidden_layers": 4,
+          "num_attention_heads": nh, "num_key_value_heads": nkv, "head_dim": hd, "vocab_size": cfg["vocab"],
+          "max_position_embeddings": 64, "rms_norm_eps": 1e-6, "hidden_act": "silu", "attn_output_gate": True,
+          "layer_types": ["linear_attention", "full_attention"] * 2, "linear_conv_kernel_dim": 4,
+          "linear_key_head_dim": 16, "linear_num_key_heads": 2, "linear_num_value_heads": 4,
+          "linear_value_head_dim": 16, "tie_word_embeddings": True,
+          "rope_parameters": {"rope_type": "default", "rope_theta": 10000000, "partial_rotary_factor": rd / hd}}
+    (d / "config.json").write_text(json.dumps({"model_type": "qwen3_5", "text_config": tc,
+                                               "vision_config": {"depth": 1}, "tie_word_embeddings": True}))
+    ccfg, cw = convert.load_hf(str(d))
+    assert (ccfg["rot_dim"], ccfg["attn_gate"], ccfg["layer_flags"]) == (rd, 1, [mlb.LAYER_LINEAR, 0, mlb.LAYER_LINEAR, 0])
+    assert (ccfg["lin_k_heads"], ccfg["lin_v_heads"], ccfg["lin_conv"], ccfg["rope_theta"]) == (2, 4, 4, 1e7)
+    for L, C in zip(w["layers"], cw["layers"]):
+        for k in L:
+            np.testing.assert_allclose(np.asarray(C[k], np.float32), np.asarray(L[k], np.float32), rtol=0, atol=1e-6,
+                                       err_msg=k)
+    exe = os.path.join(ROOT, "build", "scalar", "ml_run")
+    if os.path.exists(exe):
+        out = str(tmp_path / "q35.mlb")
+        convert.main(["hf", str(d), out])
+        rcfg, rt = mlb.read_mlb(out)
+        subprocess.run([exe, out, "--tokens", "1,7,3,9", "--dump-logits", str(tmp_path / "c.f32")], check=True)
+        got = np.fromfile(tmp_path / "c.f32", np.float32).reshape(4, -1)
+        _assert_close_to_ref(got, ref_forward.forward(rcfg, rt, [1, 7, 3, 9]))
+
+
 def test_hf_rope_scaling_types(tmp_path):
     """linear and yarn rope_scaling convert; yarn's attention factor defaults as
     transformers computes it, and its frequencies match transformers' (values

@@ -25,7 +25,19 @@ typedef struct {
     float *kbuf, *vbuf;            /* Q8: this step's K and V before quantization, [ML_BATCH_MAX][kv_dim] */
     int8_t *qq;                    /* Q8: quantized query heads [ML_BATCH_MAX][q_dim] */
     float *qd;                     /* Q8: their scales [ML_BATCH_MAX][n_heads] */
-    float *rope_cos, *rope_sin;    /* [ctx][head_dim/2] */
+    float *rope_cos, *rope_sin;    /* [ctx][rot_dim/2] */
+    int *kv_slot;                  /* layer -> its layer of the KV cache (attention layers only), or -1 */
+    /* linear attention (Qwen3.5): per linear layer the conv window
+     * [channels][conv - 1] and the state [nv][dk][dv]; they hold positions
+     * 0..lin_pos-1, so a run continues at lin_pos or starts over at 0 */
+    int *lin_slot;                 /* layer -> its linear state, or -1 */
+    float *lconv, *lrec;
+    int lin_pos;
+    float *lqkv, *lz, *lb, *la, *lo, *gate;   /* one token: channels, vdim, nv, nv, vdim; the attention gate [q_dim] */
+    float *blqkv, *blz, *blb, *bla, *blo, *bgate;   /* the same for ML_BATCH_MAX tokens */
+    float *lscratch;               /* 3 * dv floats per thread */
+    ml_qact qa_v;                  /* quantized lout input [vdim] */
+    ml_qbatch qb_v;
     float *rope_cos_local, *rope_sin_local;   /* same for rope_local_theta, or NULL */
     ml_qact qa_dim, qa_hidden, qa_q;   /* quantized inputs of dim, hidden_dim, q_dim */
     /* prompt prefill: up to ML_BATCH_MAX tokens per batched step */

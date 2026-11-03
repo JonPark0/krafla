@@ -64,6 +64,9 @@ target_compile_definitions(ml_guard PRIVATE ${DEFS})
 target_compile_options(ml_guard PRIVATE ${BASE_OPTS})
 
 add_library(ml STATIC ${LIB_SRC})
+if(NOT MSVC)   # vectorizes the gated delta rule's element-wise loops, as the Makefile does
+  set_source_files_properties(${CMAKE_SOURCE_DIR}/ops/delta.c PROPERTIES COMPILE_OPTIONS -O3)
+endif()
 target_include_directories(ml PUBLIC ${CMAKE_SOURCE_DIR})
 target_compile_definitions(ml PUBLIC ${DEFS})
 target_compile_options(ml PUBLIC ${BASE_OPTS} ${FLAGS_${ML_ISA}})
