@@ -48,13 +48,19 @@ const char *const ml_prof_names[ML_PROF_COUNT] = { "qkv", "attention", "wo", "ff
         if (s->profile) { const double t0_ = ml_now(); stmt; s->prof[cat] += ml_now() - t0_; } \
         else { stmt; } } while (0)
 
-ml_status ml_state_init(ml_state *s, ml_model *m, int nthreads, int kv_type) {
+int ml_ctx_default(const ml_config *c) {
+    return c->max_seq < ML_CTX_DEFAULT ? c->max_seq : ML_CTX_DEFAULT;
+}
+
+ml_status ml_state_init(ml_state *s, ml_model *m, int nthreads, int kv_type, int ctx) {
     memset(s, 0, sizeof *s);
     s->m = m;
+    const ml_config *c = &m->cfg;
     if (kv_type != ML_F32 && kv_type != ML_Q8_0 && kv_type != ML_F16) return ML_E_SHAPE;
+    if (ctx < 0 || ctx > c->max_seq) return ML_E_SHAPE;
+    const int T = s->ctx = ctx ? ctx : ml_ctx_default(c);
     s->kv_type = kv_type;
     const int q8 = kv_type == ML_Q8_0, f16 = kv_type == ML_F16, conv = q8 || f16;   /* conv: K, V staged in kbuf, vbuf */
-    const ml_config *c = &m->cfg;
     const size_t f = sizeof(float);
     /* attention scores: n_heads rows for one position, or
      * ml_attention_batch_heads rows per thread for a batch */
@@ -63,16 +69,16 @@ ml_status ml_state_init(ml_state *s, ml_model *m, int nthreads, int kv_type) {
     size_t lkv, kv, half, lks, ks, need = 0;
     /* Sizes are products of header fields: check them, a 32-bit size_t wraps. */
     if (!ml_mul_size((size_t)c->n_layers, (size_t)c->kv_dim, &lkv) ||
-        !ml_mul_size(lkv, (size_t)c->max_seq, &kv) || kv > (size_t)-1 / f ||
+        !ml_mul_size(lkv, (size_t)T, &kv) || kv > (size_t)-1 / f ||
         !ml_mul_size((size_t)c->n_layers, (size_t)c->n_kv_heads, &lks) ||
-        !ml_mul_size(lks, (size_t)c->max_seq, &ks) || ks > (size_t)-1 / f ||
-        !ml_mul_size((size_t)c->max_seq, (size_t)(c->head_dim / 2), &half) || half > (size_t)-1 / f)
+        !ml_mul_size(lks, (size_t)T, &ks) || ks > (size_t)-1 / f ||
+        !ml_mul_size((size_t)T, (size_t)(c->head_dim / 2), &half) || half > (size_t)-1 / f)
         return ML_E_NOMEM;
     /* {count, bytes}: every runtime buffer; each entry is at most 4 arrays,
      * each padded to ML_ALIGN by the arena. */
     const size_t parts[][2] = {
         { 4, f * c->dim }, { 2, f * c->q_dim }, { 2, f * c->hidden_dim }, { 1, f * c->vocab },
-        { att_rows, f * c->max_seq }, { 2, q8 ? kv : f16 ? 2 * kv : f * kv }, { 2, q8 ? f * ks : 0 },
+        { att_rows, f * T }, { 2, q8 ? kv : f16 ? 2 * kv : f * kv }, { 2, q8 ? f * ks : 0 },
         { 2, conv ? f * ML_BATCH_MAX * c->kv_dim : 0 }, { 1, q8 ? (size_t)ML_BATCH_MAX * c->q_dim : 0 },
         { 1, q8 ? f * ML_BATCH_MAX * c->n_heads : 0 },
         { 4, f * half },
@@ -99,7 +105,7 @@ ml_status ml_state_init(ml_state *s, ml_model *m, int nthreads, int kv_type) {
     s->hb2 = ml_arena_alloc(a, f * c->hidden_dim);
     s->q = ml_arena_alloc(a, f * c->q_dim);
     s->ao = ml_arena_alloc(a, f * c->q_dim);
-    s->att = ml_arena_alloc(a, f * att_rows * c->max_seq);
+    s->att = ml_arena_alloc(a, f * att_rows * T);
     s->logits = ml_arena_alloc(a, f * c->vocab);
     if (q8) {
         s->kq = ml_arena_alloc(a, kv);
@@ -150,7 +156,7 @@ ml_status ml_state_init(ml_state *s, ml_model *m, int nthreads, int kv_type) {
         const double freq = rope_inv_freq(c, i);
         /* the local base is used unscaled (Gemma 3's sliding layers) */
         const double lfreq = s->rope_cos_local ? pow((double)c->rope_local_theta, -2.0 * i / c->head_dim) : 0.0;
-        for (int p = 0; p < c->max_seq; p++) {
+        for (int p = 0; p < T; p++) {
             const double ang = p * freq;
             s->rope_cos[(size_t)p * h2 + i] = (float)(cos(ang) * af);
             s->rope_sin[(size_t)p * h2 + i] = (float)(sin(ang) * af);
@@ -168,14 +174,21 @@ ml_status ml_state_init(ml_state *s, ml_model *m, int nthreads, int kv_type) {
 /* This layer's view of the KV cache. */
 static ml_kv_layer kv_layer(const ml_state *s, int l) {
     const ml_config *c = &s->m->cfg;
-    const size_t rows = (size_t)l * c->max_seq;
-    const int win = s->m->layers[l].window;
-    if (s->kv_type == ML_F32)
-        return (ml_kv_layer){ s->kcache + rows * c->kv_dim, s->vcache + rows * c->kv_dim, NULL, NULL, NULL, NULL, win, NULL, NULL };
-    if (s->kv_type == ML_F16)
-        return (ml_kv_layer){ NULL, NULL, NULL, NULL, NULL, NULL, win, s->kh + rows * c->kv_dim, s->vh + rows * c->kv_dim };
-    return (ml_kv_layer){ NULL, NULL, s->kq + rows * c->kv_dim, s->vq + rows * c->kv_dim,
-                          s->kd + rows * c->n_kv_heads, s->vd + rows * c->n_kv_heads, win, NULL, NULL };
+    const size_t rows = (size_t)l * s->ctx;
+    ml_kv_layer kv = { .window = s->m->layers[l].window, .ctx = s->ctx };
+    if (s->kv_type == ML_F32) {
+        kv.k = s->kcache + rows * c->kv_dim;
+        kv.v = s->vcache + rows * c->kv_dim;
+    } else if (s->kv_type == ML_F16) {
+        kv.kh = s->kh + rows * c->kv_dim;
+        kv.vh = s->vh + rows * c->kv_dim;
+    } else {
+        kv.kq = s->kq + rows * c->kv_dim;
+        kv.vq = s->vq + rows * c->kv_dim;
+        kv.kd = s->kd + rows * c->n_kv_heads;
+        kv.vd = s->vd + rows * c->n_kv_heads;
+    }
+    return kv;
 }
 
 /* Layer l's RoPE tables at position pos: the local base's, if the layer uses it. */
@@ -191,7 +204,7 @@ static void rope_at(const ml_state *s, const ml_layer *L, int pos, const float *
 static void store_kv(ml_state *s, int l, int pos, const float *k, const float *v) {
     if (s->kv_type == ML_F32) return;
     const ml_config *c = &s->m->cfg;
-    const size_t row = (size_t)l * c->max_seq + pos;
+    const size_t row = (size_t)l * s->ctx + pos;
     if (s->kv_type == ML_F16) {
         uint16_t *kh = s->kh + row * c->kv_dim, *vh = s->vh + row * c->kv_dim;
         for (int i = 0; i < c->kv_dim; i++) { kh[i] = ml_f32_to_f16(k[i]); vh[i] = ml_f32_to_f16(v[i]); }
@@ -257,13 +270,13 @@ static void imat_add(double *acc, const float *x, int n, int k) {
 float *ml_forward(ml_state *s, int token, int pos) {
     const ml_model *m = s->m;
     const ml_config *c = &m->cfg;
-    if (pos < 0 || pos >= c->max_seq || token < 0 || token >= c->vocab) return NULL;
+    if (pos < 0 || pos >= s->ctx || token < 0 || token >= c->vocab) return NULL;
     PROF(ML_PROF_OTHER, embed(m, s->x, token));
     for (int l = 0; l < c->n_layers; l++) {
         const ml_layer *L = &m->layers[l];
         const ml_kv_layer kv = kv_layer(s, l);
-        float *k = s->kbuf ? s->kbuf : s->kcache + ((size_t)l * c->max_seq + pos) * c->kv_dim;
-        float *v = s->vbuf ? s->vbuf : s->vcache + ((size_t)l * c->max_seq + pos) * c->kv_dim;
+        float *k = s->kbuf ? s->kbuf : s->kcache + ((size_t)l * s->ctx + pos) * c->kv_dim;
+        float *v = s->vbuf ? s->vbuf : s->vcache + ((size_t)l * s->ctx + pos) * c->kv_dim;
         const float *cs, *sn;
         rope_at(s, L, pos, &cs, &sn);
 
@@ -392,8 +405,8 @@ static void prefill_step(ml_state *s, const int *tok, int n, int pos0, float *lo
         const ml_layer *L = &m->layers[l];
         const ml_kv_layer kv = kv_layer(s, l);
         /* F32: K and V go straight into the cache rows; Q8: into kbuf/vbuf first */
-        float *kc = s->kbuf ? s->kbuf : s->kcache + ((size_t)l * c->max_seq + pos0) * KV;
-        float *vc = s->vbuf ? s->vbuf : s->vcache + ((size_t)l * c->max_seq + pos0) * KV;
+        float *kc = s->kbuf ? s->kbuf : s->kcache + ((size_t)l * s->ctx + pos0) * KV;
+        float *vc = s->vbuf ? s->vbuf : s->vcache + ((size_t)l * s->ctx + pos0) * KV;
         tok_ctx tc = { s, L, kc, vc, l, pos0, n, 0 };
         PROF(ML_PROF_OTHER, tokens_run(&tc, TOK_ATTN_IN));
         IMAT(l, ML_IMAT_QKV, s->bxb, n, D);
@@ -426,7 +439,7 @@ static void prefill_step(ml_state *s, const int *tok, int n, int pos0, float *lo
 
 ml_status ml_prefill(ml_state *s, const int *tokens, int n, int pos0, float *logits) {
     const ml_config *c = &s->m->cfg;
-    if (n < 0 || pos0 < 0 || pos0 + n > c->max_seq) return ML_E_SHAPE;
+    if (n < 0 || pos0 < 0 || pos0 + n > s->ctx) return ML_E_SHAPE;
     for (int i = 0; i < n; i++)
         if (tokens[i] < 0 || tokens[i] >= c->vocab) return ML_E_SHAPE;
     const int B = s->batch < 1 ? 1 : (s->batch > ML_BATCH_MAX ? ML_BATCH_MAX : s->batch);

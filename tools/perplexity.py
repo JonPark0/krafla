@@ -51,7 +51,8 @@ def main():
             if len(chunk) < (a.ctx if a.llama_cpp else 2):
                 break
             toks = lead + chunk[len(lead):] if a.llama_cpp else lead + chunk
-            cmd = [a.ml_run, a.model, "--tokens", ",".join(map(str, toks)), "--dump-logits", out, "-t", str(a.threads)]
+            cmd = [a.ml_run, a.model, "--tokens", ",".join(map(str, toks)), "--dump-logits", out, "-t", str(a.threads),
+                   "--ctx", str(len(toks))]
             subprocess.run(cmd + a.extra.split(), check=True, capture_output=True)
             logits = np.fromfile(out, np.float32).reshape(len(toks), -1).astype(np.float64)
             logits -= logits.max(axis=1, keepdims=True)

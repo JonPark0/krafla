@@ -169,7 +169,7 @@ Qwen3, Gemma 2 and Gemma 3 checkpoints. It takes a directory that contains
 `config.json` and one or more `*.safetensors` files:
 
 ```sh
-python3 tools/convert.py hf ./TinyLlama-1.1B model.mlb --wtype q4 --max-seq 2048
+python3 tools/convert.py hf ./TinyLlama-1.1B model.mlb --wtype q4
 ```
 
 - **Weight types:** F32, F16 and BF16 safetensors are supported.
@@ -198,9 +198,9 @@ python3 tools/convert.py hf ./TinyLlama-1.1B model.mlb --wtype q4 --max-seq 2048
   last `sliding_window` positions. Every layer of Mistral v0.1 is one; in
   other models, `layer_types` or Qwen2's `max_window_layers` selects which
   layers are.
-- **Context length:** `--max-seq` caps the context, and with it the KV cache.
-  Without it the converter uses `max_position_embeddings`, which is often
-  131072 for Llama 3.
+- **Context length:** the file records the longest context the model allows,
+  `max_position_embeddings` (often 131072 for Llama 3), or less with
+  `--max-seq`. The KV cache is sized when the model runs, by `--ctx`.
 - **Scales:** each block's scale is stored as `f16` by default (Q4_0 at 4.5
   bits per weight, Q8_0 at 8.5). `--scales f32` keeps the older 4-byte scales
   (5 and 9 bits per weight). With f32 scales every file is 5–10% larger, and
@@ -273,8 +273,8 @@ from the history.
 
 Type one turn per line on stdin (a `> ` prompt appears on a terminal), or pass
 a single turn with `-i`; end with Ctrl-D. `-n` caps each reply; without it a
-reply may use the rest of the context, and when the context is full `ml_run`
-prints a message and ends the conversation. `-T`, `-p`, `--top-k` and
+reply may use the rest of the context (`--ctx`), and when the context is full
+`ml_run` prints a message and ends the conversation. `-T`, `-p`, `--top-k` and
 `--repeat-penalty` apply as usual.
 
 Without `--chat`, write the template yourself with `-i` and stop with `--eos`
@@ -413,7 +413,8 @@ build/avx2/ml_run model.mlb --tokens 1,450,3681 --dump-logits l.f32
 | `-z FILE` | Tokenizer: llama2.c `tokenizer.bin`, or `.mlt` from `tools/convert_tokenizer.py`. Needed for `-i` and for text output. |
 | `-i TEXT` | Prompt text. Encoded with BOS. |
 | `--tokens LIST` | Prompt as comma-separated token ids. Each id must be below `vocab`. |
-| `-n N` | Positions to run, prompt included. Default 64; capped at the model's `max_seq`. |
+| `-n N` | Positions to run, prompt included. Default 64; capped at `--ctx`. |
+| `--ctx N` | Context length: the positions the KV cache holds, from 1 to the file's `max_seq`. Default `max_seq`, but at most 4096, so that a file converted at the model's full context (128K positions for Llama 3.1) does not reserve gigabytes of KV cache unless asked to. Logits do not depend on it. |
 | `-T F` | Temperature. `0` means greedy decoding (ties go to the lowest id). Default 0. |
 | `-p F` | Top-p in [0, 1]. Values of 0 or 1 sample from the full distribution. Default 0.9. |
 | `--top-k N` | Sample only from the `N` most likely tokens, then apply top-p among them. `0` (default) turns it off; `1` is greedy at any temperature. |
@@ -484,9 +485,10 @@ never changes the output: `-t N` produces logits bit-identical to `-t 1`.
   65536. `vocab` and `max_seq` can be at most 2^24.
 - **Shapes:** `dim` and `hidden_dim` must be multiples of 32, `head_dim` must be
   even, and `n_heads` must be a multiple of `n_kv_heads`.
-- **Memory:** the KV cache uses `n_layers × max_seq × kv_dim × 8` bytes,
-  `n_layers × max_seq × kv_dim × 4` with `--kv f16`, or
-  `n_layers × max_seq × (kv_dim + 4 × n_kv_heads) × 2` with `--kv q8`. All size
+- **Memory:** the KV cache uses `n_layers × ctx × kv_dim × 8` bytes,
+  `n_layers × ctx × kv_dim × 4` with `--kv f16`, or
+  `n_layers × ctx × (kv_dim + 4 × n_kv_heads) × 2` with `--kv q8`, where `ctx`
+  is `--ctx`. All size
   arithmetic is overflow-checked, so on 32-bit ARMv7 an oversized model fails
   with `out of memory` instead of crashing.
 - **Architecture:** Llama-family decoders (Llama, Mistral, Qwen2, Qwen3) and

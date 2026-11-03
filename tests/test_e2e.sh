@@ -85,6 +85,17 @@ for kv in f32 q8 f16; do
         && ok || bad "150-position ref --kv $kv"
 done
 
+# --ctx: a KV cache of fewer positions (the model has 160) gives the same
+# logits; a context shorter than the tokens, or above max_seq, exits 2
+for kv in f32 q8; do
+    $RUN $B/ml_run $M/ctx_q4.mlb --tokens $CTX --dump-logits $T/ctx.$kv.c150.f32 --kv $kv --ctx 150 \
+        && cmp -s $T/ctx.$kv.f32 $T/ctx.$kv.c150.f32 && ok || bad "--ctx 150 --kv $kv logits differ"
+done
+for bad_ctx in "--ctx 149" "--ctx 161" "--ctx 0" "--ctx"; do
+    $RUN $B/ml_run $M/ctx_q4.mlb --tokens $CTX --dump-logits $T/ctx.bad.f32 $bad_ctx >/dev/null 2>&1
+    [ $? -eq 2 ] && ok || bad "ml_run $bad_ctx should exit 2"
+done
+
 # builds with packed kernels must actually pack (Q4 is packed by every one)
 G=$($RUN $B/ml_run --help 2>&1 | sed -n 's/^pack group: \([0-9]*\).*/\1/p')
 err=$($RUN $B/ml_run $M/rand_q4.mlb --tokens 1,2 -n 4 2>&1 >/dev/null)
@@ -248,6 +259,9 @@ $RUN $B/ml_run $CHAT -i "hello world" > $T/chat1.txt 2>/dev/null \
     && cmp -s $T/chat1.txt $T/chat1s.txt && ok || bad "--chat -i differs from one stdin line"
 err=$(seq 1 40 | sed 's/^/tell me more /' | $RUN $B/ml_run $CHAT 2>&1 >/dev/null); rc=$?
 [ $rc -eq 0 ] && echo "$err" | grep -q "context full" && ok || bad "--chat past the context: rc=$rc $err"
+err=$(seq 1 40 | sed 's/^/tell me more /' | $RUN $B/ml_run $CHAT --ctx 32 2>&1 >/dev/null); rc=$?
+[ $rc -eq 0 ] && echo "$err" | grep -q "context full: .* of 32 positions used (--ctx can raise it to 128)" \
+    && ok || bad "--chat --ctx 32: rc=$rc $err"
 for bad_chat in "--chat vicuna" "--system x"; do
     $RUN $B/ml_run $M/chat_q8.mlb -z $M/bpe_tiny.mlt $bad_chat -i hi >/dev/null 2>&1
     [ $? -eq 2 ] && ok || bad "ml_run $bad_chat should exit 2"

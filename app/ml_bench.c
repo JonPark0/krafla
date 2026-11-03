@@ -107,13 +107,15 @@ int ml_main(int argc, char **argv) {
     ml_model m;
     ml_status st = ml_model_load(&m, model);
     if (st != ML_OK) { fprintf(stderr, "error: %s: %s\n", model, ml_status_str(st)); return 1; }
-    ml_state s;
-    if ((st = ml_state_init(&s, &m, nthreads, kv_type)) != ML_OK || (!no_pack && (st = ml_model_pack(&m, s.pool)) != ML_OK)) {
+    if (tokens < 1) tokens = 1;
+    if (tokens > m.cfg.max_seq / 2) tokens = m.cfg.max_seq / 2;
+    ml_state s;   /* context: just the 2 * tokens positions run */
+    if ((st = ml_state_init(&s, &m, nthreads, kv_type, 2 * tokens)) != ML_OK ||
+        (!no_pack && (st = ml_model_pack(&m, s.pool)) != ML_OK)) {
         fprintf(stderr, "error: %s\n", ml_status_str(st));
         ml_model_free(&m);
         return 1;
     }
-    if (tokens > m.cfg.max_seq / 2) tokens = m.cfg.max_seq / 2;
     /* prefill `tokens` prompt tokens, then decode `tokens` more greedily */
     int *prompt = malloc(sizeof(int) * (size_t)tokens);
     for (int i = 0; i < tokens; i++) prompt[i] = 1 + i % (m.cfg.vocab - 1);

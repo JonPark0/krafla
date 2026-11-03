@@ -15,16 +15,17 @@ typedef struct {
     ml_pool *pool;
     float *x, *xb, *xb2, *hb, *hb2, *q, *logits;
     float *ao;                     /* attention output [q_dim] (wo's input) */
-    float *att;                    /* scores [max(n_heads, threads * ml_attention_batch_heads)][max_seq] */
+    int ctx;                       /* positions the state holds, at most cfg.max_seq (see ml_state_init) */
+    float *att;                    /* scores [max(n_heads, threads * ml_attention_batch_heads)][ctx] */
     int kv_type;                   /* ML_F32, ML_F16 or ML_Q8_0 (see ml_state_init) */
-    float *kcache, *vcache;        /* F32: [layer][max_seq][kv_dim] */
-    int8_t *kq, *vq;               /* Q8: [layer][max_seq][kv_dim] */
-    uint16_t *kh, *vh;             /* F16: [layer][max_seq][kv_dim] */
-    float *kd, *vd;                /* Q8: [layer][max_seq][n_kv_heads] scales */
+    float *kcache, *vcache;        /* F32: [layer][ctx][kv_dim] */
+    int8_t *kq, *vq;               /* Q8: [layer][ctx][kv_dim] */
+    uint16_t *kh, *vh;             /* F16: [layer][ctx][kv_dim] */
+    float *kd, *vd;                /* Q8: [layer][ctx][n_kv_heads] scales */
     float *kbuf, *vbuf;            /* Q8: this step's K and V before quantization, [ML_BATCH_MAX][kv_dim] */
     int8_t *qq;                    /* Q8: quantized query heads [ML_BATCH_MAX][q_dim] */
     float *qd;                     /* Q8: their scales [ML_BATCH_MAX][n_heads] */
-    float *rope_cos, *rope_sin;    /* [max_seq][head_dim/2] */
+    float *rope_cos, *rope_sin;    /* [ctx][head_dim/2] */
     float *rope_cos_local, *rope_sin_local;   /* same for rope_local_theta, or NULL */
     ml_qact qa_dim, qa_hidden, qa_q;   /* quantized inputs of dim, hidden_dim, q_dim */
     /* prompt prefill: up to ML_BATCH_MAX tokens per batched step */
@@ -48,17 +49,26 @@ size_t ml_imatrix_size(const ml_config *c);
 #define ML_BATCH_MAX 128
 #endif
 
+/* Context length a state gets when none is asked for: the model's max_seq,
+ * capped here. A file converted at the model's full context (128K positions
+ * for Llama 3.1) would otherwise take tens of GB of KV cache when opened. */
+#define ML_CTX_DEFAULT 4096
+int ml_ctx_default(const ml_config *c);
+
 /* kv_type: ML_F32 keeps the KV cache in float; ML_F16 rounds K and V to half
  * precision (half the memory, logits within f16 rounding of F32's); ML_Q8_0
  * stores each position's K and V per KV head as int8 with one scale (about
  * 3.8x less memory, faster attention on long contexts, slightly different
- * logits). */
-ml_status ml_state_init(ml_state *s, ml_model *m, int nthreads, int kv_type);
+ * logits). ctx: positions the state holds (KV cache and RoPE tables), from
+ * 1 to cfg.max_seq; 0 for ml_ctx_default. ML_E_SHAPE if it is out of range.
+ * The logits at a position do not depend on ctx. */
+ml_status ml_state_init(ml_state *s, ml_model *m, int nthreads, int kv_type, int ctx);
 /* Runs n tokens at positions pos0.. through the model in batches, filling the
  * KV cache. If logits is non-NULL it receives [n][vocab] logits; otherwise
- * the classifier is skipped. ML_E_SHAPE if a position or token is out of range. */
+ * the classifier is skipped. ML_E_SHAPE if a position (from ctx on) or a
+ * token is out of range. */
 ml_status ml_prefill(ml_state *s, const int *tokens, int n, int pos0, float *logits);
-/* Logits for `token` at position `pos`; NULL if pos or token is out of range. */
+/* Logits for `token` at position `pos`; NULL if pos (0..ctx-1) or token is out of range. */
 float *ml_forward(ml_state *s, int token, int pos);
 /* Starts summing the importance matrix (zeroed) from the next token on. */
 ml_status ml_imatrix_enable(ml_state *s);

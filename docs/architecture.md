@@ -127,7 +127,7 @@ Every matvec runs on integers:
 2. Each 32-weight block's dot product is computed as an int32.
 3. That int32 is scaled by `d_w · d_x` and accumulated in FP32.
 
-The RoPE cos/sin tables `[max_seq][head_dim/2]` are computed once at load, in
+The RoPE cos/sin tables `[ctx][head_dim/2]` are computed once at load, in
 double precision, with llama3 scaling folded in.
 
 ## Weight packing
@@ -275,8 +275,9 @@ count, so results stay bit-identical across `-t` and `--batch`.
 - **Weights:** memory-mapped read-only (`mmap` on POSIX, `CreateFileMapping` on
   Windows, or `fread` with `-DML_NO_MMAP`).
 - **Runtime buffers:** carved from **one** 64-byte-aligned arena, sized from the
-  header. These are the activations (one token, plus the prefill batch), the
-  Q8 activation buffers, the KV cache `[layer][max_seq][kv_dim]` (F32; F16
+  header and the context length `ctx` (`--ctx`, at most the header's
+  `max_seq`). These are the activations (one token, plus the prefill batch), the
+  Q8 activation buffers, the KV cache `[layer][ctx][kv_dim]` (F32; F16
   with `--kv f16`; or int8 plus one scale per position and KV head with
   `--kv q8`), the RoPE tables and the logits.
 - **Packed weights:** one allocation the size of the matrices. The originals'
