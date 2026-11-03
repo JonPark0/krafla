@@ -61,9 +61,13 @@ Q8_0 files, the mixed file if the model has one, and the tokenizer. It then
 measures them on the runner (wikitext-2 perplexity, `ml_bench` speed, one chat
 reply) and writes the model card (`scripts/hf_publish.py`). With `upload` on,
 it pushes them to `<account>/<model>-krafla`, using the repository secret
-`HF_TOKEN`.
+`HF_TOKEN`, and then brings the account's "Krafla" collection in line
+(`.github/workflows/hf-collection.yml`, `scripts/hf_collection.py`): every
+published model of the catalog, smallest first, each noted with the Krafla
+version it needs, its `--chat` template and the size of its Q4_0 file.
 `python3 scripts/hf_publish.py MODEL --text wiki.txt` does the same locally,
-without uploading.
+without uploading, and `python3 scripts/hf_collection.py --owner ACCOUNT
+--dry-run` shows what the collection sync would change.
 
 ## Building
 
@@ -146,7 +150,8 @@ Perplexity is measured on wikitext-2 (4 chunks of 512 tokens) and is
 comparable only between files of the same model. For SmolLM2, take the Q8_0
 file. The files need Krafla 0.5.0 or later and hold a 4096-position context;
 for a different context length, convert the model yourself. All models with
-the `krafla` tag are listed at <https://huggingface.co/models?other=krafla>.
+the `krafla` tag are listed at <https://huggingface.co/models?other=krafla>,
+and in a collection on the publishing account's page, smallest first.
 
 ```sh
 curl -LO https://huggingface.co/jonpark0/Qwen2.5-0.5B-Instruct-krafla/resolve/main/Qwen2.5-0.5B-Instruct-Q4_0.mlb

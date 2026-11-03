@@ -88,3 +88,11 @@ jobs:
           # the results in one annotation (readable through the checks API)
           [ -f "../work/$ID.json" ] && echo "::notice title=hf $ID::$(tr -d '\n' < "../work/$ID.json")"
           exit 0
+
+  collection:
+    name: Hugging Face collection
+    needs: model
+    # after every publishing run, even if a model failed: the published ones join
+    if: ${{ always() && inputs.upload }}
+    uses: ./.github/workflows/hf-collection.yml
+    secrets: inherit
