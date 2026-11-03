@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Added
+
+- `scripts/hf_collection.py` and `.github/workflows/hf-collection.yml`, run
+  after every publishing run of `hf-models.yml` (or by hand): they keep a
+  "Krafla" collection on Hugging Face with every published model of
+  `scripts/hf_models.json`, smallest first, each noted with the Krafla version
+  it needs, its `--chat` template and its Q4_0 size. The catalog is now in
+  that order and holds the collection's title and description.
+
 ### Fixed
 
 - `tools/convert.py` ran out of memory on a 16 GB machine converting Qwen3.5

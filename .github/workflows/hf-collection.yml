@@ -1,0 +1,28 @@
+name: Hugging Face collection
+
+# Brings the Hugging Face collection of Krafla models in line with
+# scripts/hf_models.json (scripts/hf_collection.py): every published model of
+# the catalog, smallest first, with a note on the Krafla version, chat
+# template and Q4_0 size. hf-models.yml runs it after publishing; run it by
+# hand after editing the catalog's order or the collection's description.
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Sync the collection
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Python deps
+        run: pip install --user --break-system-packages huggingface_hub
+      - name: Sync
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_HUB_DISABLE_PROGRESS_BARS: "1"
+        run: python3 scripts/hf_collection.py
