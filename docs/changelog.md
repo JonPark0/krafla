@@ -18,6 +18,9 @@ nav_title: "Changelog"
   `scripts/hf_models.json`, smallest first, each noted with the Krafla version
   it needs, its `--chat` template and its Q4_0 size. The catalog is now in
   that order and holds the collection's title and description.
+- The README, the docs site (Models link, footer, Korean page) and `llms.txt`
+  link to the collection, and the user guide lists all 15 published models
+  with the Krafla version each needs.
 
 ### Fixed
 

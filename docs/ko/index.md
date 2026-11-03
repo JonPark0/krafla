@@ -14,7 +14,7 @@ NEON부터 AVX-512 VNNI·SVE까지 지원합니다.
 {: .fs-6 .fw-300 }
 
 [릴리스 받기](https://github.com/JonPark0/krafla/releases){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
-[변환된 모델 받기](https://huggingface.co/models?other=krafla){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[변환된 모델 받기](https://huggingface.co/collections/jonpark0/krafla){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2 }
 [English](../){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ---
@@ -67,8 +67,8 @@ ISA만 보고 고른 것이며, 실제 보드에서는 아직 측정하지 않�
 
 ## 빠른 시작
 
-[릴리스](https://github.com/JonPark0/krafla/releases)와 Hugging Face에 올라간
-[변환된 모델](https://huggingface.co/models?other=krafla)만 있으면 Python 없이 바로 실행할 수 있습니다.
+[릴리스](https://github.com/JonPark0/krafla/releases)와 Hugging Face의
+[Krafla 컬렉션](https://huggingface.co/collections/jonpark0/krafla)에 있는 변환된 모델만 있으면 Python 없이 바로 실행할 수 있습니다.
 압축을 푼 릴리스 폴더에서 다음 명령을 실행합니다.
 
 ```sh

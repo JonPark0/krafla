@@ -59,8 +59,9 @@ the missing feature. It does not crash with SIGILL.
 
 Prebuilt binaries for Linux (x86-64, AArch64, ARMv7) and Windows (x86-64) are on the
 [releases page](https://github.com/JonPark0/krafla/releases); their `ml_run` wrapper starts the
-fastest build your CPU supports. Converted models (Qwen2.5, Qwen3, SmolLM2, TinyLlama) are on
-[Hugging Face](docs/user-guide.md#converted-models-on-hugging-face), so a first run needs no Python:
+fastest build your CPU supports. Fifteen converted models, from SmolLM2 135M to Qwen3.5 9B, are in the
+[Krafla collection](https://huggingface.co/collections/jonpark0/krafla) on Hugging Face
+([list](docs/user-guide.md#converted-models-on-hugging-face)), so a first run needs no Python:
 
 ```sh
 # in the unpacked release
@@ -192,8 +193,8 @@ GPU나 외부 라이브러리 없이 구형·저전력 프로세서까지 지원
   변환하며, 인코딩 결과는 `tokenizers` 라이브러리와 같습니다.
 - **사용:** 텍스트 생성, 대화 모드(`--chat`), top-k·top-p 샘플링과 반복 페널티, 퍼플렉서티 측정을 지원합니다.
   `ml_server`는 OpenAI 호환 API(스트리밍 포함)로 모델을 제공합니다.
-  변환된 모델(Qwen2.5, Qwen3, SmolLM2, TinyLlama)은 [Hugging Face](https://huggingface.co/models?other=krafla)에서
-  바로 받을 수 있습니다.
+  변환된 모델 15개(SmolLM2 135M부터 Qwen3.5 9B까지)는 Hugging Face의
+  [Krafla 컬렉션](https://huggingface.co/collections/jonpark0/krafla)에서 바로 받을 수 있습니다.
 - **검증:** 커널 출력은 스칼라 구현, 배정밀도 계산과 비교하고, 모델 전체의 출력은 numpy 참조 구현과 비교합니다.
   ARM과 구형 x86은 qemu에서, 실제 ARM 하드웨어는 CI(GitHub Arm 러너)에서 확인합니다.
 

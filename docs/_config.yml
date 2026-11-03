@@ -55,7 +55,7 @@ back_to_top_text: "Back to top"
 aux_links:
   "GitHub": "https://github.com/JonPark0/krafla"
   "Releases": "https://github.com/JonPark0/krafla/releases"
-  "Models": "https://huggingface.co/models?other=krafla"
+  "Models": "https://huggingface.co/collections/jonpark0/krafla"
   "한국어": "/krafla/ko/"
 aux_links_new_tab: false
 gh_edit_link: true

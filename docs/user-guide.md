@@ -132,26 +132,38 @@ optimization. The pthread pool (`-DML_THREADS=ON`) is not available with MSVC.
 
 These models are converted and published by `.github/workflows/hf-models.yml`
 (see [Prebuilt binaries](#prebuilt-binaries)), so you can use them without
-installing Python:
+installing Python. They are also gathered, smallest first, in the
+[Krafla collection](https://huggingface.co/collections/jonpark0/krafla) on Hugging Face:
 
-| Model | Q4_0 | Q8_0 | Perplexity Q4_0 / Q8_0 | `--chat` |
-|-------|-----:|-----:|---------------------:|----------|
-| [SmolLM2 135M Instruct](https://huggingface.co/jonpark0/SmolLM2-135M-Instruct-krafla) | 72 MiB | 136 MiB | 31.6 / 23.5 | `smollm` |
-| [SmolLM2 360M Instruct](https://huggingface.co/jonpark0/SmolLM2-360M-Instruct-krafla) | 194 MiB | 367 MiB | 21.7 / 17.4 | `smollm` |
-| [Qwen2.5 0.5B Instruct](https://huggingface.co/jonpark0/Qwen2.5-0.5B-Instruct-krafla) | 265 MiB | 501 MiB | 21.7 / 19.0 | `qwen` |
-| [Qwen3 0.6B](https://huggingface.co/jonpark0/Qwen3-0.6B-krafla) | 320 MiB | 604 MiB | 31.7 / 27.9 | `chatml` |
-| [TinyLlama 1.1B Chat](https://huggingface.co/jonpark0/TinyLlama-1.1B-Chat-v1.0-krafla) | 590 MiB | 1115 MiB | 10.6 / 10.3 | `zephyr` |
-| [Qwen2.5 1.5B Instruct](https://huggingface.co/jonpark0/Qwen2.5-1.5B-Instruct-krafla) | 829 MiB | 1565 MiB | 14.7 / 12.7 | `qwen` |
+| Model | Q4_0 | Q8_0 | Perplexity Q4_0 / Q8_0 | `--chat` | Krafla |
+|-------|-----:|-----:|---------------------:|----------|--------|
+| [SmolLM2 135M Instruct](https://huggingface.co/jonpark0/SmolLM2-135M-Instruct-krafla) | 72 MiB | 136 MiB | 31.6 / 23.5 | `smollm` | 0.8.0 |
+| [SmolLM2 360M Instruct](https://huggingface.co/jonpark0/SmolLM2-360M-Instruct-krafla) | 194 MiB | 367 MiB | 21.7 / 17.5 | `smollm` | 0.8.0 |
+| [Qwen2.5 0.5B Instruct](https://huggingface.co/jonpark0/Qwen2.5-0.5B-Instruct-krafla) | 265 MiB | 501 MiB | 21.7 / 19.0 | `qwen` | 0.8.0 |
+| [Qwen3 0.6B](https://huggingface.co/jonpark0/Qwen3-0.6B-krafla) | 320 MiB | 604 MiB | 31.7 / 27.9 | `chatml` | 0.8.0 |
+| [Qwen3.5 0.8B](https://huggingface.co/jonpark0/Qwen3.5-0.8B-krafla) | 406 MiB | 764 MiB | 27.5 / 23.9 | `qwen3.5-nothink` | 0.9.0 |
+| [TinyLlama 1.1B Chat](https://huggingface.co/jonpark0/TinyLlama-1.1B-Chat-v1.0-krafla) | 590 MiB | 1115 MiB | 10.6 / 10.3 | `zephyr` | 0.8.0 |
+| [Qwen2.5 1.5B Instruct](https://huggingface.co/jonpark0/Qwen2.5-1.5B-Instruct-krafla) | 829 MiB | 1565 MiB | 14.7 / 12.7 | `qwen` | 0.8.0 |
+| [Qwen3 1.7B](https://huggingface.co/jonpark0/Qwen3-1.7B-krafla) | 923 MiB | 1744 MiB | 24.0 / 21.0 | `chatml` | 0.8.0 |
+| [Qwen3.5 2B](https://huggingface.co/jonpark0/Qwen3.5-2B-krafla) | 1012 MiB | 1908 MiB | 18.2 / 16.5 | `qwen3.5-nothink` | 0.9.0 |
+| [SmolLM3 3B](https://huggingface.co/jonpark0/SmolLM3-3B-krafla) | 1650 MiB | 3116 MiB | 13.8 / 11.6 | `chatml` | 0.8.0 |
+| [Qwen3 4B Instruct 2507](https://huggingface.co/jonpark0/Qwen3-4B-Instruct-2507-krafla) | 2158 MiB | 4076 MiB | 14.1 / 13.1 | `chatml` | 0.8.0 |
+| [Qwen3.5 4B](https://huggingface.co/jonpark0/Qwen3.5-4B-krafla) | 2261 MiB | 4264 MiB | 13.3 / 12.2 | `qwen3.5-nothink` | 0.9.0 |
+| [Qwen2.5 7B Instruct](https://huggingface.co/jonpark0/Qwen2.5-7B-Instruct-krafla) | 4086 MiB | 7718 MiB | 9.9 / 9.0 | `qwen` | 0.8.0 |
+| [Qwen3 8B](https://huggingface.co/jonpark0/Qwen3-8B-krafla) | 4395 MiB | 8300 MiB | 13.1 / 12.5 | `chatml` | 0.9.0 |
+| [Qwen3.5 9B](https://huggingface.co/jonpark0/Qwen3.5-9B-krafla) | 4810 MiB | 9076 MiB | 10.7 / 10.1 | `qwen3.5-nothink` | 0.9.0 |
 
 Each repository holds the Q4_0 and Q8_0 files, `tokenizer.mlt`, `SHA256SUMS`
 and a model card with the speed of each file. All but the two SmolLM2
 repositories also hold a mixed file: Q4_0 with some matrices in Q8_0.
 Perplexity is measured on wikitext-2 (4 chunks of 512 tokens) and is
 comparable only between files of the same model. For SmolLM2, take the Q8_0
-file. The files need Krafla 0.5.0 or later and hold a 4096-position context;
-for a different context length, convert the model yourself. All models with
-the `krafla` tag are listed at <https://huggingface.co/models?other=krafla>,
-and in a collection on the publishing account's page, smallest first.
+file. The files need the Krafla version in the last column or later. They
+record the model's full context, of which `ml_run` and `ml_server` use 4096
+positions unless you pass `--ctx N`. The Qwen3.5 models answer without
+thinking with `qwen3.5-nothink`; `--chat qwen3.5` lets them think first.
+Models by others with the `krafla` tag are listed at
+<https://huggingface.co/models?other=krafla>.
 
 ```sh
 curl -LO https://huggingface.co/jonpark0/Qwen2.5-0.5B-Instruct-krafla/resolve/main/Qwen2.5-0.5B-Instruct-Q4_0.mlb

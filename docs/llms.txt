@@ -8,7 +8,7 @@ Key facts:
 - Models: Llama 2/3/3.1/3.2, TinyLlama, SmolLM2, SmolLM3, Mistral, Qwen2/2.5, Qwen3, Qwen3.5/3.6 (dense, with linear attention), Gemma 2 and Gemma 3, converted from Hugging Face safetensors; Hugging Face tokenizer.json files; chat mode.
 - Results are bit-identical for any thread count and prompt batch size and are checked against a numpy reference.
 - ml_server serves a model with the OpenAI API (/v1/chat/completions, /v1/completions, /v1/models, streaming), for the openai client libraries and tools that take a base URL.
-- Converted models (Qwen2.5, Qwen3, SmolLM2, TinyLlama; Q4_0 and Q8_0 files, mixed files for all but SmolLM2, and tokenizers): https://huggingface.co/models?other=krafla
+- Converted models (15 models from 135M to 9B: SmolLM2, SmolLM3, TinyLlama, Qwen2.5, Qwen3, Qwen3.5; Q4_0 and Q8_0 files, mixed files for all but SmolLM2, and tokenizers): https://huggingface.co/collections/jonpark0/krafla
 - Citation: DOI 10.5281/zenodo.23880653 (Zenodo; all versions, resolves to the latest).
 - Not supported: GPUs, K-quant formats, mixture-of-experts models, image input, Phi.
 
