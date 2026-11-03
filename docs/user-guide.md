@@ -484,10 +484,10 @@ never changes the output: `-t N` produces logits bit-identical to `-t 1`.
   thousand tokens, takes a third or more of the time. `--kv f16` halves the
   KV cache at no measurable cost; `--kv q8` cuts its size and memory traffic
   by about 3.8×, at some cost in perplexity (see `--kv`).
-- **Memory:** packing makes one copy of the weights at load and then releases
-  the originals' pages. If a device cannot hold two copies of the model even
-  briefly, use `--no-pack`, or `--pack-cache` once on a bigger machine with the
-  same build.
+- **Memory:** packing makes one copy of the weights at load, a matrix at a
+  time, releasing each original's pages as it goes, so the peak is about the
+  model plus its largest matrix. With `--no-pack` there is no copy at all, and
+  `--pack-cache` maps a copy saved by an earlier run.
 - **Start-up:** packing takes time at every start: 1.8 s for Llama 3.2 1B Q4
   on one core (0.7 s with `-t 4`). With `--pack-cache` later starts map the
   packed weights directly and take 0.13 s, at the cost of a second copy on
