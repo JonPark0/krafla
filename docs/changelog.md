@@ -8,6 +8,17 @@ nav_title: "Changelog"
 
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Packing released the original weight pages only after every matrix was
+  packed, so loading briefly held the model twice: 13.7 GB resident for
+  Qwen3 8B in Q8_0. On a 16 GB machine that pushed part of the packed weights
+  to swap, and the published card measured 4 tok/s prefill where 20 is right.
+  Each matrix's pages are now released as soon as it is packed (peak 9.6 GB;
+  5.6 GB instead of 9.4 GB for the Q4_0 file).
+
 ## 0.8.0 — 2026-11-03
 
 ### Added

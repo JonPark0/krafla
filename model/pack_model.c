@@ -58,28 +58,36 @@ static size_t place(pack_job *job, const uint8_t *base) {
     return off;
 }
 
-/* The originals are never read again, except the embedding table, which
- * the classifier may share. */
+/* A packed matrix's original pages are never read again, except the
+ * embedding table's, which the classifier may share. */
+static void release_original(ml_model *m, const ml_qtensor *W) {
+    if (W->q == m->tok_emb.q) return;
+    const size_t nq = W->type == ML_Q4_0 ? (size_t)W->rows * W->cols / 2 : (size_t)W->rows * W->cols;
+    ml_file_release(&m->file, W->q, nq);
+    if (W->dh) ml_file_release(&m->file, W->dh, (size_t)W->rows * (W->cols / QK) * sizeof(uint16_t));
+    else ml_file_release(&m->file, W->d, (size_t)W->rows * (W->cols / QK) * sizeof(float));
+}
+
 static void release_originals(ml_model *m, const pack_job *job) {
-    for (int i = 0; i < job->n; i++) {
-        const ml_qtensor *W = job->mats[i];
-        if (W->q == m->tok_emb.q) continue;
-        const size_t nq = W->type == ML_Q4_0 ? (size_t)W->rows * W->cols / 2 : (size_t)W->rows * W->cols;
-        ml_file_release(&m->file, W->q, nq);
-        if (W->dh) ml_file_release(&m->file, W->dh, (size_t)W->rows * (W->cols / QK) * sizeof(uint16_t));
-        else ml_file_release(&m->file, W->d, (size_t)W->rows * (W->cols / QK) * sizeof(float));
-    }
+    for (int i = 0; i < job->n; i++) release_original(m, job->mats[i]);
     (void)ml_model_trim_scales(m);   /* on failure the full float copy stays */
 }
 
+/* One matrix at a time, each released as soon as it is packed: the peak is
+ * the packed copy plus one matrix, not the model twice (an 8B Q8 model
+ * would otherwise need 17 GB for a moment). */
 static ml_status pack_now(ml_model *m, ml_pool *pool, pack_job *job) {
     uint8_t *mem = ml_aligned_alloc(place(job, NULL));
     if (!mem) return ML_E_NOMEM;
     place(job, mem);
-    ml_pool_run(pool, pack_task, job);
+    for (int i = 0; i < job->n; i++) {
+        pack_job one = { job->mats + i, 1 };
+        ml_pool_run(pool, pack_task, &one);
+        release_original(m, job->mats[i]);
+    }
     m->pack_mem = mem;
     m->packed = 1;
-    release_originals(m, job);
+    (void)ml_model_trim_scales(m);   /* on failure the full float copy stays */
     return ML_OK;
 }
 

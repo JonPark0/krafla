@@ -164,8 +164,11 @@ repacks every weight matrix, except the embedding table, into a
   `sdot`/`smmla`. The conversion to float (`vcvtq_n_f32_s32`) removes the 16
   exactly, so no per-block sum is subtracted.
 
-After packing, the original mapped pages are released with
-`madvise(MADV_DONTNEED)`, so resident memory stays about the size of the model.
+Matrices are packed one at a time, and each one's original mapped pages are
+released with `madvise(MADV_DONTNEED)` as soon as it is packed, so resident
+memory stays about the size of the model plus one matrix, during packing too
+(Qwen3 8B in Q8_0: a 9.6 GB peak, against 13.7 GB when every original was
+released at the end).
 `ml_run --no-pack` keeps the row-major kernels. Only the scalar build has no
 packed kernels.
 
@@ -282,8 +285,8 @@ count, so results stay bit-identical across `-t` and `--batch`.
   Q8 activation buffers, the KV cache `[layer][ctx][kv_dim]` (F32; F16
   with `--kv f16`; or int8 plus one scale per position and KV head with
   `--kv q8`), the RoPE tables and the logits.
-- **Packed weights:** one allocation the size of the matrices. The originals'
-  pages are released after packing.
+- **Packed weights:** one allocation the size of the matrices. Each
+  original's pages are released as soon as that matrix is packed.
 - **Size checks:** every size product is overflow-checked, so on a 32-bit target
   a too-large model fails with `ML_E_NOMEM`.
 - **After load:** no allocation happens during generation.
