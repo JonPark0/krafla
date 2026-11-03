@@ -106,8 +106,10 @@ def read_safetensors(path):
 
         def get(a=a, b=b, info=info):
             arr = np.frombuffer(raw[base + a:base + b], _DTYPES[info["dtype"]]).reshape(info["shape"])
-            if info["dtype"] == "BF16":
-                return (arr.astype(np.uint32) << 16).view(np.float32)
+            if info["dtype"] == "BF16":   # in place: one float32 copy, not two
+                out = arr.astype(np.uint32)
+                out <<= 16
+                return out.view(np.float32)
             return arr.astype(np.float32)
         out[name] = Lazy(get, info["shape"])
     return out

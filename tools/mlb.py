@@ -379,6 +379,26 @@ def _check_cfg(cfg):
             raise ValueError("a linear-attention layer takes no other flags")
 
 
+CHUNK_ELEMS = 1 << 25   # weights quantized at a time: the quantizers' temporaries are a few times this
+
+
+def quantize_rows(x, t, imp=None, f16=False, q4_rule="fit"):
+    """A matrix [rows, cols] -> (q, d) in type t (WTYPES), a block of rows at a
+    time. Every block of 32 is quantized on its own (and a Q4 importance fit
+    uses its own row's statistics), so the result is the same as for the
+    whole matrix at once, while the temporaries stay small: a 248K x 4K
+    embedding table in one go would need over 16 GB."""
+    rows, cols = x.shape
+    step = max(1, CHUNK_ELEMS // cols)
+    qs, ds = [], []
+    for r in range(0, rows, step):
+        c = x[r:r + step]
+        q, d = quantize_q8(c, f16) if t == WTYPES["q8"] else quantize_q4(c, imp, f16, q4_rule)
+        qs.append(q)
+        ds.append(d)
+    return (qs[0], ds[0]) if len(qs) == 1 else (np.concatenate(qs), np.concatenate(ds))
+
+
 def write_mlb(path, cfg, w, wtype, q8=(), imatrix=None, scales="f32", q4_rule="fit"):
     """Writes the model; returns [(array name, offset, nbytes)] for every array.
     q8: matrix classes (Q8_CLASSES) kept in Q8 when wtype is q4.
@@ -431,7 +451,7 @@ def write_mlb(path, cfg, w, wtype, q8=(), imatrix=None, scales="f32", q4_rule="f
             key = name.split(".")[-1]
             t = matrix_type(key, WTYPES[wtype], mask, shared)
             imp = imatrix_for(imatrix, name, shared) if imatrix else None
-            q, d = quantize_q8(arr, f16) if t == WTYPES["q8"] else quantize_q4(arr, imp, f16, q4_rule)
+            q, d = quantize_rows(arr, t, imp, f16, q4_rule)
             put(name + ".q", q)
             put(name + ".d", d)
     return layout
