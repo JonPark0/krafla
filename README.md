@@ -26,13 +26,15 @@ i8mm and SVE.
   batch size.
 - **Models:** Llama 2/3, Mistral, Qwen2.5, Qwen3, SmolLM2, Gemma 2 and Gemma 3
   from Hugging Face safetensors, with their tokenizers and chat templates.
+- **OpenAI-compatible server:** `ml_server` serves a model to the `openai`
+  client libraries and other tools that take a base URL.
 
 The code is written against a portable baseline. You choose the instruction set
 (ISA) when you compile, and each operator is bound to the best kernel for that
 ISA, with no runtime dispatch:
 
 ```sh
-make ISA=avx2                                   # build/avx2/{ml_run,ml_bench,test_*}
+make ISA=avx2                                   # build/avx2/{ml_run,ml_server,ml_bench,test_*}
 make ISA=neon CROSS=aarch64-linux-gnu-          # cross build; tests run under qemu
 make ISA=avx512vnni THREADS=pthread             # with the worker pool
 ```
@@ -82,6 +84,9 @@ python3 tools/convert.py hf ./Llama-3.2-1B-Instruct llama.mlb --wtype q4 --q8 v,
 python3 tools/convert_tokenizer.py ./Llama-3.2-1B-Instruct/tokenizer.json llama.mlt
 build/avx2/ml_run llama.mlb -z llama.mlt --chat llama3 -t 4     # one message per line
 build/avx2/ml_run qwen.mlb -z qwen.mlt --chat qwen -t 4         # Qwen2.5 Instruct
+
+# OpenAI-compatible API on http://127.0.0.1:8080/v1 (docs/server.md)
+build/avx2/ml_server qwen.mlb -z qwen.mlt --chat qwen -t 4
 ```
 
 ## FAQ
@@ -94,7 +99,7 @@ Nehalem and later, both with hand-written int8 SIMD kernels.
 ### Is it faster than llama.cpp?
 
 Decoding is at least as fast at every ISA level measured, and faster at most
-(above). llama.cpp does much more: GPU back ends, K-quants, more architectures and an HTTP server. See the
+(above). llama.cpp does much more: GPU back ends, K-quants and more architectures. See the
 [comparison](docs/benchmarks.md).
 
 ### Does it run on a Raspberry Pi?
@@ -120,6 +125,7 @@ The [documentation site](https://jonpark0.github.io/krafla/) and the
 |----------|----------|
 | [FAQ](docs/faq.md) | CPUs without AVX, Raspberry Pi, speed against llama.cpp, models, memory, limits |
 | [User guide](docs/user-guide.md) | building, cross builds, converting models, CLI options, threads, limits |
+| [Server](docs/server.md) | `ml_server`: the OpenAI-compatible HTTP API, request fields, security |
 | [Architecture](docs/architecture.md) | layers, compile-time kernel binding, ISA guard, data flow, memory, threading, numerics |
 | [File format](docs/file-format.md) | the `.mlb` model format (header, tensor layout, quantization rule, RoPE scaling) and the `.mlt` tokenizer format |
 | [Writing kernels](docs/kernels.md) | adding a kernel or an ISA, kernel rules, per-ISA idioms, assembly overrides |
@@ -137,6 +143,7 @@ The [documentation site](https://jonpark0.github.io/krafla/) and the
 | ISA guard | rejects unsupported CPUs with exit code 3, checked under qemu on core2duo/Nehalem/SandyBridge/Haswell and cortex-a53/a76/neoverse-n2 |
 | Performance | weights repacked into row-interleaved layouts for every SIMD build from SSE2 and ARMv7 NEON up (Q4 decoding up to 2.2× faster); prompts prefilled in batches of up to 128 tokens (2–6× faster), on `smmla` with i8mm; software prefetch of the weight stream on x86 (decoding 1.3–2.5× faster on one core); attention 2.4× faster on long contexts, 3.4× with the optional Q8 KV cache (`--kv q8`); an F16 KV cache (`--kv f16`) halves its memory at the same speed; numbers in [Testing](docs/testing.md#benchmarking) |
 | Thread pool | bit-identical results for any thread count; ThreadSanitizer clean; a 4-layer dim-2048 Q4 model decodes at 140 tok/s with `-t 1` and 503 tok/s with `-t 4` (avx512vnni, 4 vCPUs) |
+| Server | `ml_server` answers the OpenAI API (`/v1/chat/completions`, `/v1/completions`, `/v1/models`, streaming) one request at a time, keeping the KV cache between requests; tested over HTTP in every e2e run, including against the `openai` client |
 | Windows | MSVC builds (scalar, SSE2, AVX2) pass the unit tests and match the numpy reference in CI; the MinGW-built release binaries are checked under Wine before publishing |
 | Quantization | Q8_0, Q4_0, and Q4 with chosen matrix classes in Q8 (`--q8 v,o,down`: Llama 3.2 1B perplexity 17.89 at 831 MiB, against 17.27 for Q8 at 1252 MiB and 19.91 for Q4 at 663 MiB); f16 block scales by default (Q4 at 4.5 bits per weight); each Q4 block's scale is fitted rather than rounded from its maximum (Qwen2.5 0.5B: 15.14 against 15.86 for llama.cpp's Q4_0, see the [comparison](docs/benchmarks.md)), except for Gemma 3, whose checkpoints do better with llama.cpp's rounding (its quantization-aware 1B checkpoint: Q4 perplexity 40.50, below its Q8); `tools/perplexity.py` measures it |
 | Models | Llama 2/3/3.1/3.2, TinyLlama, SmolLM2, Mistral (with its sliding window), Qwen2/2.5 (q/k/v biases), Qwen3 (its own head size, per-head q/k norm), Gemma 2 (soft-capped attention scores and logits) and Gemma 3 (GELU, block output norms, local and global layers; the text model of the 4B and larger image-text checkpoints); RoPE scaling of the llama3, linear and yarn kinds. TinyLlama 1.1B, Llama 3.2 1B, Qwen2.5 0.5B, Qwen3 0.6B, SmolLM2 135M and Gemma 3 1B and 4B were run end to end from their Hugging Face files; Q8 perplexity matches an F32 reference (Qwen2.5 18.98 against 19.00, Qwen3 27.90 against 28.10, Gemma 3 41.97 against 42.32) |
@@ -184,6 +191,7 @@ GPU나 외부 라이브러리 없이 구형·저전력 프로세서까지 지원
   SmolLM2, Mistral, Qwen2/Qwen2.5, Qwen3, Gemma 2, Gemma 3)를 변환합니다. Hugging Face `tokenizer.json`도
   변환하며, 인코딩 결과는 `tokenizers` 라이브러리와 같습니다.
 - **사용:** 텍스트 생성, 대화 모드(`--chat`), top-k·top-p 샘플링과 반복 페널티, 퍼플렉서티 측정을 지원합니다.
+  `ml_server`는 OpenAI 호환 API(스트리밍 포함)로 모델을 제공합니다.
   변환된 모델(Qwen2.5, Qwen3, SmolLM2, TinyLlama)은 [Hugging Face](https://huggingface.co/models?other=krafla)에서
   바로 받을 수 있습니다.
 - **검증:** 커널 출력은 스칼라 구현, 배정밀도 계산과 비교하고, 모델 전체의 출력은 numpy 참조 구현과 비교합니다.

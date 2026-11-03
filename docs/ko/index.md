@@ -101,8 +101,21 @@ build/avx2/ml_run llama.mlb -z llama.mlt --chat llama3 -t 4
 ### llama.cpp와 비교하면 어떤가요?
 
 디코딩은 측정한 모든 ISA에서 Krafla가 llama.cpp와 같거나 더 빠릅니다. 대신 llama.cpp는 GPU 백엔드,
-K-quant 형식, 더 많은 아키텍처(MoE, 이미지 입력), HTTP 서버를 지원합니다. Krafla는 CPU에서 Q8_0·Q4_0
+K-quant 형식, 더 많은 아키텍처(MoE, 이미지 입력)를 지원합니다. Krafla는 CPU에서 Q8_0·Q4_0
 추론만 다룹니다.
+
+### OpenAI 클라이언트 라이브러리로 쓸 수 있나요?
+
+네. `ml_server`가 모델을 OpenAI API(`/v1/chat/completions`, `/v1/completions`, `/v1/models`, 스트리밍
+포함)로 제공합니다. `openai` Python·JavaScript 라이브러리나 base URL을 받는 도구에서 그대로 쓸 수 있습니다.
+
+```sh
+./ml_server Qwen2.5-0.5B-Instruct-Q4_0.mlb -z tokenizer.mlt --chat qwen -t 4
+# base URL: http://127.0.0.1:8080/v1
+```
+
+요청은 한 번에 하나씩 처리하고, 요청 사이에 KV 캐시를 유지합니다. 그래서 대화의 다음 차례는 새로 추가된
+토큰만 계산합니다.
 
 ### 메모리는 얼마나 필요한가요?
 
@@ -128,6 +141,7 @@ KV 캐시 크기는 `--ctx`로 정하는 문맥 길이에 비례합니다(기본
 
 - [FAQ](../faq.md): AVX 없는 CPU, 라즈베리 파이, llama.cpp 비교, 모델, 메모리
 - [사용자 가이드](../user-guide.md): 빌드, 크로스 빌드, 모델 변환, 실행 옵션
+- [서버](../server.md): OpenAI 호환 API, 요청 필드, 보안
 - [llama.cpp와의 비교](../benchmarks.md): ISA별 속도와 퍼플렉서티
 - [아키텍처](../architecture.md): 컴파일 시점 커널 결합, CPU 검사, 가중치 재배치, 스레드
 - [변경 이력](../changelog.md)

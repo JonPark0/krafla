@@ -48,9 +48,9 @@ On Qwen2.5 0.5B with the same Q8_0 and Q4_0 formats on the same machines
   rounded from its maximum. Q8_0 scores 13.32–13.35 against 13.34 for
   llama.cpp's F16.
 
-llama.cpp does much more: GPU back ends, K-quant and i-quant formats, many
-more architectures (mixture of experts, image input) and an HTTP server.
-Krafla covers Q8_0 and Q4_0 on the CPU, for the ISAs listed above.
+llama.cpp does much more: GPU back ends, K-quant and i-quant formats, and many
+more architectures (mixture of experts, image input). Krafla covers Q8_0 and
+Q4_0 on the CPU, for the ISAs listed above.
 
 ## Does it run on a Raspberry Pi?
 
@@ -107,6 +107,21 @@ halves it and `--kv q8` makes it about 3.8× smaller.
 No GPU. The runtime is C11 with no dependencies beyond the C library (and
 pthreads for the threaded builds); the release binaries are static. Python 3
 with numpy is needed only to convert models and tokenizers.
+
+## Can I use it with OpenAI client libraries?
+
+Yes. `ml_server` serves a model with the OpenAI API (`/v1/chat/completions`,
+`/v1/completions` and `/v1/models`, with streaming), so the `openai` Python
+and JavaScript libraries and tools that take a base URL can use it:
+
+```sh
+./ml_server Qwen2.5-0.5B-Instruct-Q4_0.mlb -z tokenizer.mlt --chat qwen -t 4
+# base URL: http://127.0.0.1:8080/v1
+```
+
+It answers one request at a time and keeps the KV cache between requests, so
+the next turn of a conversation runs only its new tokens. See
+[Server](server.md).
 
 ## Are the results deterministic?
 

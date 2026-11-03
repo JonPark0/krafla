@@ -39,6 +39,8 @@ operator is bound to the best kernel for it, with no runtime dispatch.
   batch size.
 - **Models:** Llama 2/3, Mistral, Qwen2.5, Qwen3, SmolLM2, Gemma 2 and Gemma 3
   from Hugging Face safetensors, with their tokenizers and chat templates.
+- **OpenAI-compatible server:** `ml_server` serves a model to the `openai`
+  client libraries and other tools that take a base URL ([Server](server.md)).
 
 ## Decode speed against llama.cpp
 
@@ -114,7 +116,8 @@ every option; the [FAQ](faq.md) answers the common questions.
   sliding windows; logit soft-capping), Hugging Face `tokenizer.json`
   (SentencePiece-style including Gemma's, Llama 3, Qwen and GPT-2 byte-level BPE, identical to the `tokenizers` library)
 - **Use:** text generation, chat mode (`llama3`, `zephyr`, `llama2`, `qwen`, `smollm`, `chatml`, `gemma` templates), top-k /
-  top-p / repetition penalty, perplexity measurement, importance matrices for Q4
+  top-p / repetition penalty, perplexity measurement, importance matrices for Q4, an OpenAI-compatible HTTP server
+  (chat and text completions, streaming, KV cache kept between turns)
 - **Verification:** kernel tests against scalar and double-precision references, end-to-end logits against a
   numpy reference, qemu for ARM and old x86 CPUs, native CI on GitHub's Arm runners
 

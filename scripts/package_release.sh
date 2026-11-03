@@ -4,7 +4,7 @@
 #   krafla-VER-linux-aarch64.tar.gz   neon neon_dotprod neon_i8mm sve      (static)
 #   krafla-VER-linux-armv7hf.tar.gz   neon scalar                          (static)
 #   krafla-VER-windows-x86_64.zip     sse2 sse41 avx2 avxvnni avx512vnni   (MinGW, static)
-# Each holds bin/<isa>/{ml_run,ml_bench,ml_tok}, wrappers that pick the best
+# Each holds bin/<isa>/{ml_run,ml_bench,ml_tok,ml_server}, wrappers that pick the best
 # build the CPU supports, the model tools, and the license files.
 # Usage: scripts/package_release.sh [TAG]   (TAG, e.g. v0.1.0, must match ML_VERSION)
 set -eu
@@ -24,7 +24,7 @@ common() {   # common DIR: docs, licenses and model tools
 }
 
 unix_wrappers() {   # unix_wrappers DIR "ISAS best first"
-    for tool in ml_run ml_bench ml_tok; do
+    for tool in ml_run ml_bench ml_tok ml_server; do
         cat > "$1/$tool" <<EOF
 #!/bin/sh
 # Runs $tool from the best build in bin/ that this CPU supports.
@@ -50,7 +50,7 @@ linux() {   # linux NAME CROSS-PREFIX "ISAS best first"
         make -s ISA=$isa THREADS=pthread EXTRA_CFLAGS=$REL "$4" apps
         b=$(make -s ISA=$isa THREADS=pthread EXTRA_CFLAGS=$REL "$4" print-build)
         mkdir -p "$d/bin/$isa"
-        cp "$b/ml_run" "$b/ml_bench" "$b/ml_tok" "$d/bin/$isa/"
+        cp "$b/ml_run" "$b/ml_bench" "$b/ml_tok" "$b/ml_server" "$d/bin/$isa/"
         "${2}strip" "$d/bin/$isa/"*
     done
     unix_wrappers "$d" "$3"
@@ -68,12 +68,12 @@ windows() {   # windows "ISAS best first"
         cmake -S . -B "$b" -DML_ISA=$isa -DML_THREADS=ON -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE="$PWD/$STAGE/mingw.cmake" -DCMAKE_EXE_LINKER_FLAGS=-static \
             -DCMAKE_C_FLAGS="-Wa,-muse-unaligned-vector-move" > /dev/null
-        cmake --build "$b" --target ml_run ml_bench ml_tok -j4 > /dev/null
+        cmake --build "$b" --target ml_run ml_bench ml_tok ml_server -j4 > /dev/null
         mkdir -p "$d/bin/$isa"
-        cp "$b/ml_run.exe" "$b/ml_bench.exe" "$b/ml_tok.exe" "$d/bin/$isa/"
+        cp "$b/ml_run.exe" "$b/ml_bench.exe" "$b/ml_tok.exe" "$b/ml_server.exe" "$d/bin/$isa/"
         x86_64-w64-mingw32-strip "$d/bin/$isa/"*.exe
     done
-    for tool in ml_run ml_bench ml_tok; do
+    for tool in ml_run ml_bench ml_tok ml_server; do
         {
             printf '@echo off\r\n'
             printf 'rem Runs %s from the best build in bin\\ that this CPU supports.\r\n' "$tool"

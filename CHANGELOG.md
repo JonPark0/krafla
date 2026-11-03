@@ -4,6 +4,18 @@
 
 ### Added
 
+- `ml_server`, an OpenAI-compatible HTTP server for one model, in C11 with no
+  dependencies (POSIX sockets, Winsock on Windows): `POST /v1/chat/completions`
+  (with the `--chat` templates), `POST /v1/completions`, `GET /v1/models` and
+  `GET /health`; streaming as server-sent events with an optional usage chunk;
+  `temperature`, `top_p`, `top_k`, `repeat_penalty`, `seed`, `stop` and
+  `max_tokens`. Requests run one at a time, and the KV cache is kept between
+  them, so the next turn of a conversation runs only its new tokens
+  (`usage.prompt_tokens_details.cached_tokens`). It listens on 127.0.0.1 by
+  default; `--api-key` (or `KRAFLA_API_KEY`) and `--cors` are optional. The
+  release archives include it, and `tests/server_check.py` checks it over
+  HTTP in every e2e run. See `docs/server.md`.
+
 - `--ctx N` for `ml_run`: the context length, which sizes the KV cache, the
   attention scratch and the RoPE tables at run time, from 1 to the file's
   `max_seq`. The default is `max_seq` capped at 4096, so a file converted at

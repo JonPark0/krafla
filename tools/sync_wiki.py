@@ -17,6 +17,7 @@ PAGES = {   # source file -> wiki page name
     "README.md": "Home",
     "docs/faq.md": "FAQ",
     "docs/user-guide.md": "User-Guide",
+    "docs/server.md": "Server",
     "docs/architecture.md": "Architecture",
     "docs/file-format.md": "File-Format",
     "docs/kernels.md": "Writing-Kernels",
@@ -29,6 +30,7 @@ SIDEBAR = """**Krafla**
 - [[Home]]
 - [[FAQ]]
 - [[User guide|User-Guide]]
+- [[Server]]
 - [[Architecture]]
 - [[File formats|File-Format]]
 - [[Writing kernels|Writing-Kernels]]

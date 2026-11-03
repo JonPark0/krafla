@@ -21,7 +21,7 @@ CHANGELOG_PAGE = os.path.join(ROOT, "docs", "changelog.md")
 CHANGELOG_FRONT = """---
 title: "Changelog: what changed in each Krafla release"
 description: "Release notes of Krafla: new models, kernels, formats, speed-ups and fixes in each version."
-nav_order: 9
+nav_order: 10
 nav_title: "Changelog"
 ---
 <!-- Generated from CHANGELOG.md by scripts/sync_docs.py; edit CHANGELOG.md instead. -->

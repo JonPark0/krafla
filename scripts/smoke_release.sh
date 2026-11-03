@@ -24,12 +24,21 @@ for b in "$T"/krafla-$VER-linux-x86_64/bin/*/ml_tok; do
     [ $rc -eq 3 ] && { echo "skip $b: CPU lacks it"; continue; }
     check version "" "$b"
 done
-for b in "$T"/krafla-$VER-linux-aarch64/bin/*/ml_run; do check version "qemu-aarch64 -cpu max" "$b"; done
-for b in "$T"/krafla-$VER-linux-armv7hf/bin/*/ml_run; do check version "qemu-arm -cpu max" "$b"; done
+for b in "$T"/krafla-$VER-linux-x86_64/bin/*/ml_server; do
+    rc=0; "$(dirname "$b")/ml_tok" --help >/dev/null 2>&1 || rc=$?
+    [ $rc -eq 3 ] || check version "" "$b"
+done
+for b in "$T"/krafla-$VER-linux-aarch64/bin/*/ml_run "$T"/krafla-$VER-linux-aarch64/bin/*/ml_server; do
+    check version "qemu-aarch64 -cpu max" "$b"
+done
+for b in "$T"/krafla-$VER-linux-armv7hf/bin/*/ml_run "$T"/krafla-$VER-linux-armv7hf/bin/*/ml_server; do
+    check version "qemu-arm -cpu max" "$b"
+done
 if command -v wine64 >/dev/null || [ -x /usr/lib/wine/wine64 ]; then
     W=$(command -v wine64 || echo /usr/lib/wine/wine64)
     export WINEDEBUG=-all WINEPREFIX="$T/wine"
     check version "$W" "$T/krafla-$VER-windows-x86_64/bin/sse2/ml_run.exe"
+    check version "$W" "$T/krafla-$VER-windows-x86_64/bin/sse2/ml_server.exe"
     $W "$T/krafla-$VER-windows-x86_64/bin/sse2/ml_run.exe" "$M" --tokens $TOK -n 12 -T 0 2>/dev/null | tr -d '\r' > "$T/win.txt"   # text-mode CRLF
 else
     echo "skip windows: no wine"

@@ -1,7 +1,7 @@
 ---
 title: "Krafla vs llama.cpp: CPU speed and perplexity benchmarks"
 description: "Prefill speed, decode speed and perplexity of Krafla and llama.cpp on the same model in Q8_0 and Q4_0, at each ISA level from SSE2 to AVX-512 VNNI on x86-64 and from NEON to i8mm on AArch64."
-nav_order: 4
+nav_order: 5
 nav_title: "Comparison with llama.cpp"
 ---
 
