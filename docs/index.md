@@ -88,8 +88,8 @@ curl -LO https://huggingface.co/jonpark0/Qwen2.5-0.5B-Instruct-krafla/resolve/ma
 ./ml_run Qwen2.5-0.5B-Instruct-Q4_0.mlb -z tokenizer.mlt --chat qwen -t 4
 ```
 
-Converted models are available for SmolLM2 135M and 360M, Qwen2.5 0.5B and
-1.5B, Qwen3 0.6B and TinyLlama 1.1B, in Q4_0 and Q8_0 and, for all but
+Fifteen converted models, from SmolLM2 135M to Qwen3.5 9B, are in the
+[Krafla collection](https://huggingface.co/collections/jonpark0/krafla) on Hugging Face, in Q4_0 and Q8_0 and, for all but
 SmolLM2, a mixed file. To build from source and convert any supported Hugging
 Face model:
 
