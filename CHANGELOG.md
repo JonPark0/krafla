@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- `tools/convert.py` ran out of memory on a 16 GB machine converting Qwen3.5
+  9B: a matrix was quantized whole, and Q4's temporaries took four times its
+  size on top of it (its 248K × 4K embedding table: over 16 GB). Matrices are
+  now quantized a block of rows at a time, which gives the same bytes (every
+  block of 32 is quantized on its own); that table now needs 1.1 GB beyond
+  itself. BF16 tensors are widened to float32 in place, without a second
+  copy.
+
 ## 0.9.0 — 2026-11-03
 
 ### Added

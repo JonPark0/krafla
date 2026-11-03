@@ -76,6 +76,29 @@ def test_f16_scales(tmp_path):
         pass
 
 
+def test_quantize_rows_matches_whole():
+    """write_mlb quantizes large matrices a block of rows at a time; the result
+    is the whole matrix's, for every rule, with and without an importance
+    matrix and f16 scales."""
+    rng = np.random.default_rng(7)
+    x = rng.standard_normal((300, 256)).astype(np.float32)
+    imp = rng.uniform(0.1, 3.0, 256)
+    saved = mlb.CHUNK_ELEMS
+    try:
+        for args in ((None, False, "fit"), (imp, True, "fit"), (None, True, "round")):
+            whole = mlb.quantize_q4(x, *args)
+            mlb.CHUNK_ELEMS = 3 * 256   # three rows at a time
+            q, d = mlb.quantize_rows(x, mlb.WTYPES["q4"], *args)
+            mlb.CHUNK_ELEMS = saved
+            assert np.array_equal(q, whole[0]) and np.array_equal(d, whole[1])
+        mlb.CHUNK_ELEMS = 256
+        q, d = mlb.quantize_rows(x, mlb.WTYPES["q8"], None, True)
+        whole = mlb.quantize_q8(x, True)
+        assert np.array_equal(q, whole[0]) and np.array_equal(d, whole[1])
+    finally:
+        mlb.CHUNK_ELEMS = saved
+
+
 def test_quantize_q4_round_rule():
     # llama.cpp's Q4_0: d = signed max / -8, levels trunc(x/d + 8.5) capped at 15, minus 8
     x = np.zeros((1, 32), np.float32)
