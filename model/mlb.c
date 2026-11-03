@@ -177,7 +177,8 @@ ml_status ml_model_load(ml_model *m, const char *path) {
     const size_t normsz = (size_t)c->dim * sizeof(float);
     const uint8_t *lf = c->layer_flags ? take(&cur, (size_t)c->n_layers) : NULL;
     for (int l = 0; lf && cur.ok && l < c->n_layers; l++)
-        if ((lf[l] & ~ML_LAYER_ALL) || ((lf[l] & ML_LAYER_LOCAL_ROPE) && !(c->rope_local_theta > 0.0f))) {
+        if ((lf[l] & ~ML_LAYER_ALL) || ((lf[l] & ML_LAYER_LOCAL_ROPE) && !(c->rope_local_theta > 0.0f)) ||
+            ((lf[l] & ML_LAYER_LOCAL_ROPE) && (lf[l] & ML_LAYER_NO_ROPE))) {
             ml_model_free(m);
             return ML_E_FORMAT;
         }
@@ -186,6 +187,7 @@ ml_status ml_model_load(ml_model *m, const char *path) {
         ml_layer *L = &m->layers[l];
         L->window = !lf || (lf[l] & ML_LAYER_SLIDING) ? c->sliding_window : 0;
         L->local_rope = lf && (lf[l] & ML_LAYER_LOCAL_ROPE);
+        L->no_rope = lf && (lf[l] & ML_LAYER_NO_ROPE);
         L->attn_norm = take(&cur, normsz);
         L->wq = take_mat(&cur, c->q_dim, c->dim, WT(ML_Q8M_QK), c->scale_f16);
         L->wk = take_mat(&cur, c->kv_dim, c->dim, WT(ML_Q8M_QK), c->scale_f16);

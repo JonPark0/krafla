@@ -23,7 +23,8 @@ WTYPES = {"f32": 0, "q8": 1, "q4": 2}
 _HDR = struct.Struct("<4sIIIIIIIIffIIIfffIIIIIfIIfIIffIff")
 ACTS = {"silu": 0, "gelu_tanh": 1}
 POST_NORM_KEYS = ("post_attn_norm", "post_ffn_norm")   # F32 [dim], after w3, when post_norms is set (Gemma 3)
-LAYER_SLIDING, LAYER_LOCAL_ROPE = 1, 2   # per-layer flag bits (Gemma 3, Qwen2 with some sliding layers)
+LAYER_SLIDING, LAYER_LOCAL_ROPE, LAYER_NO_ROPE = 1, 2, 4   # per-layer flag bits (Gemma 3, Qwen2 with some
+# sliding layers, SmolLM3's layers without RoPE)
 ROPE_TYPES = {None: 0, "llama3": 1, "linear": 2, "yarn": 3}
 LAYER_KEYS = ("attn_norm", "wq", "wk", "wv", "wo", "ffn_norm", "w1", "w2", "w3")
 BIAS_KEYS = ("bq", "bk", "bv")   # F32, after wo, when the header's qkv_bias is set (Qwen2)
@@ -47,6 +48,12 @@ def layer_local_rope(cfg, layer):
     """Whether layer `layer` uses the local RoPE base (rope_local_theta, unscaled)."""
     flags = cfg.get("layer_flags")
     return flags is not None and bool(flags[layer] & LAYER_LOCAL_ROPE)
+
+
+def layer_no_rope(cfg, layer):
+    """Whether layer `layer` leaves queries and keys unrotated (NoPE)."""
+    flags = cfg.get("layer_flags")
+    return flags is not None and bool(flags[layer] & LAYER_NO_ROPE)
 
 QT = namedtuple("QT", "type q d shape")   # quantized tensor as stored
 

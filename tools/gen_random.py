@@ -66,6 +66,8 @@ def main():
                     help="with --sliding-window: only layers other than every N-th slide (Gemma 3), "
                          "and with --rope-local-theta use that base")
     ap.add_argument("--rope-local-theta", type=float, default=0.0, help="RoPE base of the sliding layers")
+    ap.add_argument("--nope-every", type=int, default=0, metavar="N",
+                    help="every N-th layer leaves q and k unrotated (NoPE, SmolLM3)")
     ap.add_argument("--gelu", action="store_true", help="GELU (tanh) FFN activation instead of SiLU (Gemma)")
     ap.add_argument("--post-norms", action="store_true", help="RMSNorm of each block's output (Gemma 3)")
     ap.add_argument("--embed-scale", type=float, default=0.0, help="factor on the embedding rows (Gemma: sqrt(dim))")
@@ -91,6 +93,9 @@ def main():
         cfg["layer_flags"] = [(mlb.LAYER_SLIDING if s else 0) | (mlb.LAYER_LOCAL_ROPE if s and a.rope_local_theta else 0)
                               for s in sl]
         cfg["rope_local_theta"] = a.rope_local_theta or None
+    if a.nope_every:   # layer i has no RoPE when (i + 1) % N == 0
+        flags = cfg.get("layer_flags") or [0] * a.layers
+        cfg["layer_flags"] = [f | (mlb.LAYER_NO_ROPE if (i + 1) % a.nope_every == 0 else 0) for i, f in enumerate(flags)]
     if a.rope_scaling:
         f, lo, hi, orig = a.rope_scaling.split(",")
         cfg["rope_scaling"] = {"type": "llama3", "factor": float(f), "low_freq_factor": float(lo),

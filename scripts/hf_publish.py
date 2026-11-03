@@ -27,12 +27,22 @@ REPO_URL = "https://github.com/JonPark0/krafla"
 CHAT_PROMPT = "What is the capital of France? Answer in one sentence."
 APACHE_URL = "https://www.apache.org/licenses/LICENSE-2.0.txt"
 
-NOTICES = {
-    "llama": "Llama 3.2 is licensed under the Llama 3.2 Community License, "
-             "Copyright © Meta Platforms, Inc. All Rights Reserved.\n",
-    "gemma": "Gemma is provided under and subject to the Gemma Terms of Use found at "
-             "ai.google.dev/gemma/terms\n",
-}
+LLAMA = {"llama3.1": "Llama 3.1", "llama3.2": "Llama 3.2"}   # license id -> name in its notices
+
+
+def notice_text(model):
+    if model["notice"] == "llama":
+        name = LLAMA[model["license"]]
+        return f"{name} is licensed under the {name} Community License, " \
+               "Copyright © Meta Platforms, Inc. All Rights Reserved.\n"
+    return "Gemma is provided under and subject to the Gemma Terms of Use found at ai.google.dev/gemma/terms\n"
+
+
+def file_max_seq(path):
+    """max_seq from a .mlb header (u32 at offset 32)."""
+    import struct
+    with open(path, "rb") as f:
+        return struct.unpack("<I", f.read(36)[32:36])[0]
 
 
 def load_catalog():
@@ -144,6 +154,10 @@ def model_card(model, repo_id, base, files, info):
     ]
     if notice == "llama":
         lines += ["**Built with Llama.**", ""]
+    ctx = info["max_seq"]
+    run_ctx = (f"The files record the model's {ctx}-position context. `ml_run` and `ml_server` use {min(ctx, 4096)} "
+               "positions of it unless you pass `--ctx N`, which sets the size of the KV cache."
+               if ctx > 4096 else f"The files record the model's {ctx}-position context.")
     lines += [
         f"INT4 and INT8 conversions of [{model['source']}](https://huggingface.co/{model['source']}) for "
         f"[Krafla]({REPO_URL}), a dependency-free C11 runtime for CPU-only inference on x86-64 "
@@ -165,8 +179,7 @@ def model_card(model, repo_id, base, files, info):
         f"`{info['isa']}` build. Perplexity is measured on the wikitext-2 test set, 4 chunks of 512 tokens "
         "(`tools/perplexity.py --ctx 512 --chunks 4`). Lower is better, and it is only comparable between "
         "files of the same model. Speed comes from `ml_bench -n 128` (128 prompt tokens, then 128 decoded "
-        f"tokens). The files are converted with a {info['max_seq']}-position context. "
-        "The full hashes are in `SHA256SUMS`.",
+        "tokens). The full hashes are in `SHA256SUMS`.",
         "",
         "## Run",
         "",
@@ -177,7 +190,12 @@ def model_card(model, repo_id, base, files, info):
         f"curl -LO https://huggingface.co/{repo_id}/resolve/main/{q4}",
         f"curl -LO https://huggingface.co/{repo_id}/resolve/main/tokenizer.mlt",
         f"./ml_run {q4} -z tokenizer.mlt --chat {model['chat']} -t 4",
+        "",
+        "# or serve it with the OpenAI API at http://127.0.0.1:8080/v1",
+        f"./ml_server {q4} -z tokenizer.mlt --chat {model['chat']} -t 4",
         "```",
+        "",
+        run_ctx,
         "",
         "The release's `ml_run` runs the most capable build your CPU supports. A greedy one-turn reply from "
         f"`{q4}` to \"{CHAT_PROMPT + model.get('prompt_suffix', '')}\":",
@@ -193,8 +211,7 @@ def model_card(model, repo_id, base, files, info):
         "",
         "```sh",
         f"python3 tools/convert_tokenizer.py {base}/tokenizer.json tokenizer.mlt",
-        *[f"python3 tools/convert.py hf {base} {f['name']} {' '.join(f['args'])} --max-seq {info['max_seq']}"
-          for f in files],
+        *[f"python3 tools/convert.py hf {base} {f['name']} {' '.join(f['args'])}" for f in files],
         "```",
         "",
         "Q4_0 and Q8_0 keep one scale per block of 32 weights (f16 scales: 4.5 and 8.5 bits per weight). "
@@ -205,8 +222,9 @@ def model_card(model, repo_id, base, files, info):
         "",
     ]
     if notice == "llama":
-        lines.append("These files are derived from Llama 3.2 and are distributed under the "
-                     "[Llama 3.2 Community License](LICENSE.txt) and its [Acceptable Use Policy](USE_POLICY.md). "
+        name = LLAMA[lic]
+        lines.append(f"These files are derived from {name} and are distributed under the "
+                     f"[{name} Community License](LICENSE.txt) and its [Acceptable Use Policy](USE_POLICY.md). "
                      "See `NOTICE`.")
     elif notice == "gemma":
         lines.append("Gemma is provided under and subject to the Gemma Terms of Use found at "
@@ -230,9 +248,8 @@ def publish(model, a):
     os.makedirs(out)
     snapshot_download(model["source"], local_dir=src, token=token,
                       allow_patterns=["*.json", "*.safetensors", "LICENSE*", "USE_POLICY*", "NOTICE*"])
-    catalog = load_catalog()
     info = {"version": ml_version(), "commit": git_commit(), "cpu": cpu_name(), "threads": a.threads,
-            "max_seq": catalog["max_seq"], "date": datetime.date.today().isoformat(),
+            "date": datetime.date.today().isoformat(),
             "machine": "a GitHub runner" if os.environ.get("GITHUB_ACTIONS") else "a local machine",
             "isa": os.path.basename(a.build).split("-")[0]}
 
@@ -240,16 +257,14 @@ def publish(model, a):
     run([sys.executable, os.path.join(ROOT, "tools", "convert_tokenizer.py"), os.path.join(src, "tokenizer.json"), tok])
     info["tok_size"], info["tok_sha256"] = os.path.getsize(tok), sha256(tok)
     files = []
+    cap = ["--max-seq", str(model["max_seq"])] if model.get("max_seq") else []
     for suffix, args, desc in variants(model):
         name = f"{base}-{suffix}.mlb"
         path = os.path.join(out, name)
-        run([sys.executable, os.path.join(ROOT, "tools", "convert.py"), "hf", src, path, *args,
-             "--max-seq", str(catalog["max_seq"])])
-        f = {"name": name, "args": args, "desc": desc, "size": os.path.getsize(path), "sha256": sha256(path)}
-        f["measure"] = measure(a.build, path, tok, a.text, a.threads, model["chat"],
-                               CHAT_PROMPT + model.get("prompt_suffix", ""))
-        print(f"{name}: {json.dumps(f['measure'])}", flush=True)
-        files.append(f)
+        run([sys.executable, os.path.join(ROOT, "tools", "convert.py"), "hf", src, path, *args, *cap])
+        files.append({"name": name, "args": args + cap, "desc": desc, "path": path,
+                      "size": os.path.getsize(path), "sha256": sha256(path)})
+    info["max_seq"] = file_max_seq(files[0]["path"])
 
     info["license_files"] = []
     for name in sorted(os.listdir(src)):
@@ -265,13 +280,17 @@ def publish(model, a):
         info["license_files"].append("LICENSE")
     if model.get("notice"):
         with open(os.path.join(out, "NOTICE"), "w", encoding="utf-8") as fh:
-            fh.write(NOTICES[model["notice"]])
+            fh.write(notice_text(model))
     with open(os.path.join(out, "SHA256SUMS"), "w", encoding="utf-8") as fh:
         for f in files:
             fh.write(f"{f['sha256']}  {f['name']}\n")
         fh.write(f"{info['tok_sha256']}  tokenizer.mlt\n")
 
-    shutil.rmtree(src, ignore_errors=True)   # disk space on the runner
+    shutil.rmtree(src, ignore_errors=True)   # disk space on the runner, before measuring
+    for f in files:
+        f["measure"] = measure(a.build, f["path"], tok, a.text, a.threads, model["chat"],
+                               CHAT_PROMPT + model.get("prompt_suffix", ""))
+        print(f"{f['name']}: {json.dumps(f['measure'])}", flush=True)
     api = HfApi(token=token)
     owner = a.owner or (api.whoami()["name"] if token else "OWNER")
     repo_id = f"{owner}/{base}-krafla"

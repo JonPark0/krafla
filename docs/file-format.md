@@ -77,8 +77,10 @@ and key head after the biases and before RoPE, with `norm_eps`.
 With `layer_flags` set, `n_layers` bytes (padded to 64 like every array) come
 first in the body, one per layer. Bit 0 puts the layer behind the sliding
 window; bit 1 makes it use `rope_local_theta` instead of `rope_theta` and its
-scaling; other bits must be 0. Without layer flags, the window (if any) applies
-to every layer.
+scaling; bit 2 leaves the layer's queries and keys unrotated (no RoPE, as in
+SmolLM3), and cannot be combined with bit 1; other bits must be 0. Without
+layer flags, the window (if any) applies to every layer. Bit 2 needs Krafla
+0.8.0 or later; older versions refuse such files.
 
 ## Body
 
@@ -228,7 +230,7 @@ takes `attention_factor` from the config, or computes `0.1 ln f + 1` or the
 | Problem | Status |
 |---------|--------|
 | file cannot be opened | `ML_E_IO` |
-| empty file, file shorter than the header, bad magic or version, unknown `wtype` or `rope_type`, invalid llama3, linear or yarn parameters, a `rope_attn_factor` without yarn, `qkv_bias`, `qk_norm`, `layer_flags`, `post_norms` or `scale_f16` other than 0 or 1, an unknown `act`, a negative or non-finite `embed_scale`, `attn_scale`, `attn_softcap` or `final_softcap`, unknown layer flag bits, a negative `rope_local_theta` or a local-RoPE layer without one, `sliding_window` above 2^24, file shorter than the arrays the header implies, a Q8 quant equal to -128 | `ML_E_FORMAT` |
+| empty file, file shorter than the header, bad magic or version, unknown `wtype` or `rope_type`, invalid llama3, linear or yarn parameters, a `rope_attn_factor` without yarn, `qkv_bias`, `qk_norm`, `layer_flags`, `post_norms` or `scale_f16` other than 0 or 1, an unknown `act`, a negative or non-finite `embed_scale`, `attn_scale`, `attn_softcap` or `final_softcap`, unknown layer flag bits, a layer with both the local RoPE base and no RoPE, a negative `rope_local_theta` or a local-RoPE layer without one, `sliding_window` above 2^24, file shorter than the arrays the header implies, a Q8 quant equal to -128 | `ML_E_FORMAT` |
 | zero or over-limit dimension, `dim` or `hidden_dim` not a multiple of 32, `dim % n_heads ≠ 0` without `head_dim`, `n_heads % n_kv_heads ≠ 0`, odd `head_dim`, `q_dim` not a multiple of 32 or above 65536, `vocab < 3` | `ML_E_SHAPE` |
 
 All size arithmetic is overflow-checked, which matters on 32-bit targets.

@@ -41,7 +41,7 @@ jobs:
     needs: plan
     name: ${{ matrix.id }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 300
     strategy:
       fail-fast: false
       max-parallel: 3
@@ -49,6 +49,12 @@ jobs:
         id: ${{ fromJSON(needs.plan.outputs.models) }}
     steps:
       - uses: actions/checkout@v5
+      - name: Free disk space
+        # an 8B model takes about 35 GB here (safetensors, then three files);
+        # the runner image's Android, .NET, Haskell and CodeQL toolchains are unused
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          echo "::notice title=disk::$(df -h --output=avail / | tail -n 1) free"
       - name: Install Python deps
         run: |
           .github/scripts/apt-install.sh python3-numpy

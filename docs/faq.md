@@ -66,8 +66,8 @@ Pi yet, so there are no Raspberry Pi speed numbers.
 
 ## Which models does it run?
 
-Llama 2, Llama 3/3.1/3.2, TinyLlama, SmolLM2, Mistral, Qwen2/Qwen2.5, Qwen3,
-Gemma 2 and Gemma 3 (the text model, 1B to 27B), from their Hugging Face
+Llama 2, Llama 3/3.1/3.2, TinyLlama, SmolLM2, SmolLM3, Mistral, Qwen2/Qwen2.5,
+Qwen3, Gemma 2 and Gemma 3 (the text model, 1B to 27B), from their Hugging Face
 safetensors files, plus llama2.c checkpoints. `tools/convert.py` converts a
 checkpoint to the `.mlb` format and `tools/convert_tokenizer.py` its
 `tokenizer.json`. TinyLlama 1.1B, Llama 3.2 1B, Qwen2.5 0.5B, Qwen3 0.6B,

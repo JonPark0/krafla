@@ -432,6 +432,39 @@ def test_hf_qwen3(tmp_path):
         _assert_close_to_ref(got, ref_forward.forward(rcfg, t, [1, 7, 3]))
 
 
+def test_hf_smollm3_nope(tmp_path):
+    """SmolLM3: layers whose no_rope_layers entry is 0 leave q and k unrotated
+    (NoPE). Their scores do not depend on the converter's row permutation,
+    which q and k share."""
+    d, cfg, orig = _make_hf(tmp_path, model_type="smollm3", no_rope_layers=[1, 0])
+    ccfg, w = convert.load_hf(d)
+    assert ccfg["layer_flags"] == [0, mlb.LAYER_NO_ROPE]
+    nh, nkv = cfg["n_heads"], cfg["n_kv_heads"]
+    hd = cfg["dim"] // nh
+    x = np.random.default_rng(4).standard_normal(cfg["dim"])
+    p = "model.layers.1.self_attn."
+    qh, kh = (orig[p + "q_proj.weight"] @ x).reshape(nh, hd), (orig[p + "k_proj.weight"] @ x).reshape(nkv, hd)
+    qi, ki = (w["layers"][1]["wq"] @ x).reshape(nh, hd), (w["layers"][1]["wk"] @ x).reshape(nkv, hd)
+    for h in range(nh):
+        np.testing.assert_allclose(qh[h] @ kh[h // (nh // nkv)], qi[h] @ ki[h // (nh // nkv)], rtol=1e-5, atol=1e-6)
+    d2, _, _ = _make_hf(tmp_path / "i", model_type="smollm3", no_rope_layer_interval=2)   # the default pattern
+    assert convert.load_hf(d2)[0]["layer_flags"] == [0, mlb.LAYER_NO_ROPE]
+    d3, _, _ = _make_hf(tmp_path / "r", model_type="smollm3", no_rope_layers=[1, 1])     # RoPE everywhere
+    assert convert.load_hf(d3)[0]["layer_flags"] is None
+    exe = os.path.join(ROOT, "build", "scalar", "ml_run")
+    if os.path.exists(exe):
+        out = str(tmp_path / "s3.mlb")
+        convert.main(["hf", d, out])
+        rcfg, t = mlb.read_mlb(out)
+        assert rcfg["layer_flags"] == [0, mlb.LAYER_NO_ROPE]
+        subprocess.run([exe, out, "--tokens", "1,7,3,9", "--dump-logits", str(tmp_path / "c.f32")], check=True)
+        got = np.fromfile(tmp_path / "c.f32", np.float32).reshape(4, -1)
+        ref = ref_forward.forward(rcfg, t, [1, 7, 3, 9])
+        _assert_close_to_ref(got, ref)
+        rot = dict(rcfg, layer_flags=None)   # the same weights with RoPE everywhere differ
+        assert np.abs(ref_forward.forward(rot, t, [1, 7, 3, 9]) - ref)[1:].max() > 1e-3 * np.abs(ref).max()
+
+
 def test_hf_rope_scaling_types(tmp_path):
     """linear and yarn rope_scaling convert; yarn's attention factor defaults as
     transformers computes it, and its frequencies match transformers' (values

@@ -290,7 +290,7 @@ float *ml_forward(ml_state *s, int token, int pos) {
                                        ml_k_add(v, L->bv, c->kv_dim));
         if (L->q_norm) PROF(ML_PROF_OTHER, heads_norm(s->q, L->q_norm, c->n_heads, c);
                                            heads_norm(k, L->k_norm, c->n_kv_heads, c));
-        PROF(ML_PROF_OTHER, ml_k_rope(s->q, k, cs, sn, c->head_dim, c->n_heads, c->n_kv_heads);
+        PROF(ML_PROF_OTHER, if (!L->no_rope) ml_k_rope(s->q, k, cs, sn, c->head_dim, c->n_heads, c->n_kv_heads);
                             store_kv(s, l, pos, k, v));
 
         PROF(ML_PROF_ATTN, ml_attention(s->pool, s->ao, s->q, &kv, s->att, s->qq, s->qd, c, pos));
@@ -351,7 +351,7 @@ static void token_stage(const tok_ctx *c, int t) {
         if (L->q_norm) { heads_norm(q, L->q_norm, cfg->n_heads, cfg); heads_norm(k, L->k_norm, cfg->n_kv_heads, cfg); }
         const float *cs, *sn;
         rope_at(s, L, c->pos0 + t, &cs, &sn);
-        ml_k_rope(q, k, cs, sn, cfg->head_dim, cfg->n_heads, cfg->n_kv_heads);
+        if (!L->no_rope) ml_k_rope(q, k, cs, sn, cfg->head_dim, cfg->n_heads, cfg->n_kv_heads);
         store_kv(s, c->l, c->pos0 + t, k, v);
         break;
     }
