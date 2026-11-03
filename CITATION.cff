@@ -10,7 +10,7 @@ repository-code: "https://github.com/JonPark0/krafla"
 url: "https://jonpark0.github.io/krafla/"
 license: MIT
 doi: 10.5281/zenodo.23880653
-version: 0.8.0
+version: 0.9.0
 date-released: "2026-11-03"
 abstract: >-
   Krafla (formerly isa-lm) is a dependency-free C11 inference runtime for Llama-style decoder

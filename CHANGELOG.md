@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.0 — 2026-11-03
 
 ### Added
 
@@ -20,8 +20,7 @@
   faster; Qwen3.5 4B Q8_0 8.18 against 8.15, prefill 1.7× faster.
 - Chat templates `qwen3.5` (the reply opens with `<think>`) and
   `qwen3.5-nothink` (an empty think block), for `ml_run` and `ml_server`.
-- `scripts/hf_models.json`: Qwen3.5 0.8B, 2B, 4B and 9B, to publish once a
-  release includes Qwen3.5 support.
+- `scripts/hf_models.json`: Qwen3.5 0.8B, 2B, 4B and 9B, in the default set.
 
 ### Changed
 

@@ -13,7 +13,7 @@ typedef enum {
     ML_E_ISA
 } ml_status;
 
-#define ML_VERSION "0.8.0"
+#define ML_VERSION "0.9.0"
 
 #define QK 32          /* quantization block size */
 #define ML_ALIGN 64    /* alignment of every tensor array */
