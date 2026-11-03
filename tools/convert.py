@@ -120,7 +120,7 @@ def _unrotate(w, n_heads):
     return w.reshape(n_heads, 2, hd // 2, dim).transpose(0, 2, 1, 3).reshape(rows, dim)
 
 
-HF_TYPES = ("llama", "mistral", "qwen2", "qwen3", "gemma2", "gemma3_text")
+HF_TYPES = ("llama", "mistral", "qwen2", "qwen3", "smollm3", "gemma2", "gemma3_text")
 
 
 def _window(c):
@@ -248,6 +248,12 @@ def load_hf(d, max_seq=None):
             cfg.update(layer_flags=[(mlb.LAYER_LOCAL_ROPE | (mlb.LAYER_SLIDING if window else 0)) if x else 0
                                     for x in local],
                        rope_local_theta=float(c.get("rope_local_base_freq", 10000.0)))
+    if mtype == "smollm3":   # NoPE: no_rope_layers[i] is 0 where layer i does not rotate q and k
+        n = cfg["n_layers"]
+        use = c.get("no_rope_layers") or [int((i + 1) % c.get("no_rope_layer_interval", 4) != 0) for i in range(n)]
+        if not all(use):
+            flags = list(cfg["layer_flags"] or [0] * n)
+            cfg["layer_flags"] = [f | (0 if u else mlb.LAYER_NO_ROPE) for f, u in zip(flags, use)]
     norm = (lambda v: v + 1.0) if gemma else (lambda v: v)
     w = {"tok_emb": t[pre + "embed_tokens.weight"], "final_norm": norm(t[pre + "norm.weight"]), "layers": []}
     for i in range(cfg["n_layers"]):

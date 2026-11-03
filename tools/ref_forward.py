@@ -114,8 +114,9 @@ def forward(cfg, t, tokens, kv="f32"):
             if "q_norm" in L:   # per head, before RoPE (Qwen3)
                 q = np.concatenate([rmsnorm(q[i:i + hd], L["q_norm"], eps) for i in range(0, len(q), hd)])
                 k = np.concatenate([rmsnorm(k[i:i + hd], L["k_norm"], eps) for i in range(0, len(k), hd)])
-            q = rope(q, ct[pos], st[pos], hd)
-            k = rope(k, ct[pos], st[pos], hd)
+            if not mlb.layer_no_rope(cfg, li):
+                q = rope(q, ct[pos], st[pos], hd)
+                k = rope(k, ct[pos], st[pos], hd)
             if kv == "f16":
                 k = np.asarray(k, np.float32).astype(np.float16).astype(np.float64)
                 v = np.asarray(v, np.float32).astype(np.float16).astype(np.float64)

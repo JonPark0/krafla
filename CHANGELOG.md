@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- SmolLM3: the converter reads `model_type` `smollm3` and marks the layers
+  that leave out RoPE (`no_rope_layers`, every fourth layer) with a new
+  per-layer flag, bit 2 (`ML_LAYER_NO_ROPE`), which the runtime and
+  `tools/ref_forward.py` follow. SmolLM3 3B in Q8_0: perplexity 11.61 on 4
+  chunks of wikitext-2, against 15.43 with RoPE in every layer; its tokenizer
+  matches the `tokenizers` library on all 304 test texts. Older versions refuse
+  files with the new flag.
+- `scripts/hf_models.json`: Qwen3 1.7B, Qwen3 4B Instruct 2507, Qwen3 8B,
+  Qwen2.5 7B Instruct and SmolLM3 3B in the default set; Llama 3.2 3B, Llama
+  3.1 8B, Mistral 7B Instruct v0.3 and Gemma 3 4B and 12B for accounts that
+  have accepted their licenses.
+
+### Changed
+
+- `scripts/hf_publish.py` converts at the model's full context (a `max_seq`
+  entry can still cap it) and says on the card how `--ctx` sizes the KV cache;
+  cards show `ml_server` next to `ml_run`. It converts all files before
+  measuring them, so the safetensors are gone by then, and the workflow frees
+  about 30 GB of runner disk and allows 5 hours per model, for 7B and 8B models.
+
 ## 0.7.0 — 2026-11-03
 
 ### Added

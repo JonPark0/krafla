@@ -164,9 +164,9 @@ Use the matching llama2.c `tokenizer.bin` as it is.
 
 ### From a Hugging Face checkpoint
 
-The converter reads Llama (including SmolLM2), Mistral, Qwen2 (Qwen2.5),
-Qwen3, Gemma 2 and Gemma 3 checkpoints. It takes a directory that contains
-`config.json` and one or more `*.safetensors` files:
+The converter reads Llama (including SmolLM2), SmolLM3, Mistral, Qwen2
+(Qwen2.5), Qwen3, Gemma 2 and Gemma 3 checkpoints. It takes a directory that
+contains `config.json` and one or more `*.safetensors` files:
 
 ```sh
 python3 tools/convert.py hf ./TinyLlama-1.1B model.mlb --wtype q4
@@ -183,7 +183,9 @@ python3 tools/convert.py hf ./TinyLlama-1.1B model.mlb --wtype q4
   converter refuses other types (dynamic, longrope) instead of writing a model
   that would compute wrong outputs.
 - **Architectures:** `model_type` must be `llama`, `mistral`, `qwen2`, `qwen3`,
-  `gemma2`, `gemma3_text` (Gemma 3 1B) or `gemma3` (Gemma 3 4B, 12B and 27B).
+  `smollm3`, `gemma2`, `gemma3_text` (Gemma 3 1B) or `gemma3` (Gemma 3 4B, 12B
+  and 27B). SmolLM3 leaves out RoPE in every fourth layer (`no_rope_layers`);
+  the converter marks those layers.
   The `gemma3` checkpoints are image-text models: the converter takes the text
   model and leaves the vision tower out. Biases are accepted only on Qwen2's
   q, k and v projections. Supported features: a `head_dim` other than

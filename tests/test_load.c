@@ -164,9 +164,19 @@ static void test_load_rejects_bad_layer_flags(void) {
     TT_EQ_INT(m.layers[1].window, 0);
     TT_EQ_INT(m.layers[0].local_rope, 1);
     ml_model_free(&m);
-    b[256] = 4;   /* unknown bit */
+    b[256] = 8;   /* unknown bit */
     spit(tmp_path, b, n);
     TT_EQ_INT(ml_model_load(&m, tmp_path), ML_E_FORMAT);
+    b[256] = 6;   /* local RoPE base and no RoPE at once */
+    spit(tmp_path, b, n);
+    TT_EQ_INT(ml_model_load(&m, tmp_path), ML_E_FORMAT);
+    b[256] = 4;   /* no RoPE */
+    spit(tmp_path, b, n);
+    TT_EQ_INT(ml_model_load(&m, tmp_path), ML_OK);
+    TT_EQ_INT(m.layers[0].no_rope, 1);
+    TT_EQ_INT(m.layers[0].local_rope, 0);
+    TT_EQ_INT(m.layers[1].no_rope, 0);
+    ml_model_free(&m);
     b[256] = 3;
     memset(b + 100, 0, 4);   /* rope_local_theta = 0 */
     spit(tmp_path, b, n);
