@@ -22,6 +22,14 @@ nav_title: "Changelog"
   link to the collection, and the user guide lists all 15 published models
   with the Krafla version each needs.
 
+### Changed
+
+- [The benchmarks](https://github.com/JonPark0/krafla/blob/main/docs/benchmarks.md)
+  add the AMX kernel measured again on 0.9.0 with Qwen3 0.6B and 8B: on four
+  threads it prefills the 8B model 5-19% faster than the AVX-512 VNNI build
+  and the small one about as fast, so AMX stays out of the build. The kernel
+  is on the `exp/amx` and `exp/amx-v2` branches.
+
 ### Fixed
 
 - `tools/convert.py` ran out of memory on a 16 GB machine converting Qwen3.5
