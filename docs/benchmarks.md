@@ -100,8 +100,9 @@ prefills Q8_0 at 93 tok/s on one thread and 318 tok/s on four, and Q4_0 at 83
 and 320 tok/s. That is about a third of Krafla's speed in the AVX-512 VNNI
 rows.
 
-An AMX kernel for Krafla's packed layout is kept on the `exp/amx` branch and
-is not part of the build. Each 32-weight block has its own scale, so the
+An AMX kernel for Krafla's packed layout is kept on the `exp/amx` branch
+(`exp/amx-v2` holds the second version, on 0.9.0) and is not part of the
+build. Each 32-weight block has its own scale, so the
 kernel has to store each 16×16 tile product and rescale it with AVX-512, in
 the same order as the matrix-vector kernel; this keeps prefill bit-identical
 to decoding. Microbenchmarks on this CPU show where the time goes. They run
@@ -124,9 +125,29 @@ for `tdpbssd`. On the kernels alone, Q8_0 got 5–13% faster than the first
 version (1.2–1.4× as fast as the AVX-512 VNNI kernel) and Q4_0 20–43% faster
 (1.0–1.2× as fast).
 
-On Qwen2.5 0.5B, prefill with this kernel is level with the AVX-512 VNNI
-build on one thread and 15–20% slower on four threads, so AMX stays out of
-the build.
+On Qwen2.5 0.5B, prefill with this kernel was level with the AVX-512 VNNI
+build on one thread and 15–20% slower on four threads.
+
+Larger models have larger matrices, so the kernel was measured again on
+0.9.0 with Qwen3 0.6B and Qwen3 8B (`ml_bench`, a prompt of 512 tokens for
+0.6B and 256 for 8B on four threads, 128 for 8B on one thread; two runs
+each, the two builds alternating):
+
+| Model | Weights | Threads | AVX-512 VNNI prefill | AMX prefill | AMX / VNNI |
+|-------|---------|--------:|---------------------:|------------:|-----------:|
+| Qwen3 0.6B | Q8_0 | 1 | 136 tok/s | 151–153 tok/s | 1.11–1.12× |
+| Qwen3 0.6B | Q4_0 | 1 | 129–159 tok/s | 143–160 tok/s | 1.00–1.11× |
+| Qwen3 0.6B | Q8_0 | 4 | 467 tok/s | 428–486 tok/s | 0.92–1.04× |
+| Qwen3 0.6B | Q4_0 | 4 | 431–488 tok/s | 490–492 tok/s | 1.00–1.14× |
+| Qwen3 8B | Q8_0 | 1 | 17.2 tok/s | 20.8 tok/s | 1.21× |
+| Qwen3 8B | Q4_0 | 1 | 20.4 tok/s | 23.2 tok/s | 1.14× |
+| Qwen3 8B | Q8_0 | 4 | 54.1–57.2 tok/s | 60.7–64.6 tok/s | 1.06–1.19× |
+| Qwen3 8B | Q4_0 | 4 | 63.0–68.1 tok/s | 66.3–72.9 tok/s | 1.05–1.07× |
+
+The 8B model gains more than the small one, but on four threads only 5–19%,
+about as much as the runs vary on this VM; decoding does not change, as it
+uses the same kernels. That is too little for a build that only Xeon CPUs
+from Sapphire Rapids on can run, so AMX stays out of the build.
 
 ## GitHub runners
 
