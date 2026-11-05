@@ -197,8 +197,9 @@ measured as above, without an importance matrix. Changes are against rounded:
   - On Llama 3.2 3B it was the other way round (−2.4%, +2.0%), so neither
     explains the loss.
 - **Krafla's runtime agrees.** `tools/perplexity.py --llama-cpp` on the same
-  32 chunks, with files from `tools/convert.py`, scores SmolLM2 135M at 22.90
-  rounded, 22.19 fitted and 21.97 flat.
+  32 chunks, with files from `tools/convert.py`, gives these perplexities:
+  - SmolLM2 135M: 22.90 rounded, 22.19 fitted and 21.97 flat.
+  - Llama 3.2 1B: 16.42 rounded, 16.72 fitted and 16.44 flat.
 
 The other architectures keep their rules:
 
