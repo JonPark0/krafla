@@ -32,9 +32,11 @@ operator is bound to the best kernel for it, with no runtime dispatch.
 - **Old and low-power CPUs:** builds for any x86-64 CPU (SSE2) and for 32-bit
   ARMv7 NEON boards, with no GPU or external libraries required; static
   binaries for each ISA.
-- **Lower Q4 perplexity:** with fitted block scales, Qwen2.5 0.5B in Q4_0
-  reaches perplexity 15.1, against 15.8–15.9 for llama.cpp's Q4_0. Q8 matches
-  an F32 reference.
+- **Q4 quality:** each Q4_0 block's scale is fitted rather than rounded from
+  the block's maximum. Against llama.cpp's Q4_0 on the same tensors, the KL
+  divergence from the unquantized model is 6–9% lower on four Qwen models and
+  5% higher on Llama 3.2 1B ([Q4_0 block scales](q4-scales.md)). Q8 matches an F32
+  reference.
 - **Deterministic:** output is bit-identical for any thread count and prompt
   batch size.
 - **Models:** Llama 2/3, Mistral, Qwen2.5, Qwen3, Qwen3.5/3.6, SmolLM2, SmolLM3, Gemma 2 and Gemma 3
