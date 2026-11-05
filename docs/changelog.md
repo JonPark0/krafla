@@ -8,7 +8,7 @@ nav_title: "Changelog"
 
 # Changelog
 
-## Unreleased
+## 0.9.1 — 2026-11-05
 
 ### Added
 
