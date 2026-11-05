@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- [Q4_0 block scales](https://github.com/JonPark0/krafla/blob/main/docs/q4-scales.md),
+  a page of the docs site, compares Krafla's fitted Q4_0 scales with
+  llama.cpp's Q4_0 on seven models from 360M to 1.7B. All variants have the
+  same tensors and are scored by llama-perplexity on 32 chunks: KL divergence
+  from the unquantized model, perplexity and same top token. Two scripts
+  reproduce the runs:
+  - `scripts/q4_patch_gguf.py` rewrites a GGUF's Q4_0 tensors with
+    `tools/mlb.py`.
+  - `scripts/compare_q4.sh` builds and scores every variant.
+
+### Changed
+
+- The README, the docs home page, the FAQ and the Korean page no longer claim
+  a lower Q4 perplexity from a 4-chunk run (Qwen2.5 0.5B, 15.1 against
+  15.8–15.9). On 32 chunks the two rules score 15.88 and 16.11. Without an
+  importance matrix, the fitted scales lower the KL divergence by 6–9% on four
+  Qwen models and raise it by 5% on Llama 3.2 1B. With an importance matrix,
+  llama.cpp's own search matches the fit or does better on five of the seven
+  models.
+
 ## 0.9.1 — 2026-11-05
 
 ### Added

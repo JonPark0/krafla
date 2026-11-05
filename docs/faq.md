@@ -43,10 +43,14 @@ On Qwen2.5 0.5B with the same Q8_0 and Q4_0 formats on the same machines
   AArch64, except dotprod Q4_0, where llama.cpp leads by 1.10–1.13×. On a CPU
   with AMX, llama.cpp's AMX kernels prefill 1.03–1.17× faster than Krafla's
   AVX-512 VNNI build.
-- **Perplexity** is lower with Krafla's Q4_0: 15.09–15.14 against 15.82–15.93
-  for llama.cpp's Q4_0, because each block's scale is fitted rather than
-  rounded from its maximum. Q8_0 scores 13.32–13.35 against 13.34 for
-  llama.cpp's F16.
+- **Quality:** Krafla's Q8_0 scores perplexity 13.32–13.35 against 13.34 for
+  llama.cpp's F16. Its Q4_0 fits each block's scale rather than rounding it
+  from the block's maximum. Against llama.cpp's Q4_0 on the same tensors:
+  - Without an importance matrix, the KL divergence from the unquantized
+    model is 6–9% lower on four Qwen models and 5% higher on Llama 3.2 1B.
+  - With an importance matrix, llama.cpp's own search matches the fit or
+    does better on five of seven models.
+  - See [Q4_0 block scales](q4-scales.md).
 
 llama.cpp does much more: GPU back ends, K-quant and i-quant formats, and many
 more architectures (mixture of experts, image input). Krafla covers Q8_0 and
