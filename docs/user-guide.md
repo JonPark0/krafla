@@ -403,8 +403,14 @@ models are fitted by x². `--q4-rule fit|flat|round` overrides the choice.
 
 | Q4 rule (f16 scales) | Qwen2.5 0.5B | Llama 3.2 1B | Qwen3 0.6B | SmolLM2 135M | Gemma 3 1B | Gemma 3 1B QAT |
 |---|---:|---:|---:|---:|---:|---:|
-| fit | **21.73** | **19.90** | **31.69** | **31.60** | 53.25 | 47.43 |
+| fit | **21.73** | 19.90 | **31.69** | 31.60 | 53.25 | 47.43 |
+| flat | 22.25 | **19.67** | 33.11 | **31.25** | — | — |
 | round | 22.45 | 19.94 | 31.75 | 32.31 | **49.83** | **40.50** |
+
+On these 2044 tokens `flat` loses to the fit on both Qwen models. Over 8,192
+tokens it is ahead on Qwen3 0.6B (21.49 against 21.70 with
+`tools/perplexity.py --llama-cpp`), but 14% behind in KL divergence on Qwen3
+1.7B, so Qwen keeps the fit.
 
 An importance matrix (`--imatrix`) tells the fit which weights matter most.
 It records how large each input channel's activations are on sample text, and

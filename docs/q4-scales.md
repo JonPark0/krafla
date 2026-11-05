@@ -203,8 +203,9 @@ measured as above, without an importance matrix. Changes are against rounded:
 
 The other architectures keep their rules:
 
-- **Qwen:** the plain fit beat rounding on all four models, and `flat` raised
-  KLD over it by 14% on Qwen3 1.7B.
+- **Qwen:** the plain fit beat rounding on all four models. `flat` was 2–7%
+  below it on three of them, but 14% above it on Qwen3 1.7B, so Qwen keeps
+  the plain fit until more models settle it.
 - **Gemma 3 1B:** `flat` was 3% above rounded.
 
 The importance-matrix and format tables cover the first seven models only.
