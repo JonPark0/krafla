@@ -10,8 +10,8 @@ repository-code: "https://github.com/JonPark0/krafla"
 url: "https://jonpark0.github.io/krafla/"
 license: MIT
 doi: 10.5281/zenodo.23880653
-version: 0.9.0
-date-released: "2026-11-03"
+version: 0.9.1
+date-released: "2026-11-05"
 abstract: >-
   Krafla (formerly isa-lm) is a dependency-free C11 inference runtime for Llama-style decoder
   Transformers. It supports INT8 (Q8_0) and INT4 (Q4_0) weights with f16 or f32 block scales,
