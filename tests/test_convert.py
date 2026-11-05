@@ -85,7 +85,7 @@ def test_quantize_rows_matches_whole():
     imp = rng.uniform(0.1, 3.0, 256)
     saved = mlb.CHUNK_ELEMS
     try:
-        for args in ((None, False, "fit"), (imp, True, "fit"), (None, True, "round")):
+        for args in ((None, False, "fit"), (imp, True, "fit"), (None, True, "round"), (None, True, "flat")):
             whole = mlb.quantize_q4(x, *args)
             mlb.CHUNK_ELEMS = 3 * 256   # three rows at a time
             q, d = mlb.quantize_rows(x, mlb.WTYPES["q4"], *args)
@@ -108,9 +108,14 @@ def test_quantize_q4_round_rule():
     lv = np.concatenate([(p[0, :16] & 15).astype(int) - 8, (p[0, :16] >> 4).astype(int) - 8])
     assert list(lv[:6]) == [-8, 4, 4, -3, 7, 7]
     assert not lv[6:].any()
+    # a block of zeros, signed or not, gets d = -0 (llama.cpp's +0 / -8) and level 0
+    z = np.array([[-0.0] * 16 + [0.0] * 16], np.float32)
+    for f16 in (False, True):
+        p, d = mlb.quantize_q4(z, f16=f16, rule="round")
+        assert d[0, 0] == 0 and np.signbit(d[0, 0]) and (p == 0x88).all()
     # the fit is unchanged as the default, and refuses no rule silently
     assert np.array_equal(mlb.quantize_q4(x)[0], mlb.quantize_q4(x, rule="fit")[0])
-    for bad in (dict(rule="nearest"), dict(rule="round", imp=np.ones(32))):
+    for bad in (dict(rule="nearest"), dict(rule="round", imp=np.ones(32)), dict(rule="flat", imp=np.ones(32))):
         try:
             mlb.quantize_q4(x, **bad)
             raise AssertionError(bad)
@@ -333,6 +338,46 @@ def _assert_close_to_ref(got, ref):
     rounding boundary moves later logits by ~1% (tests/test_e2e.sh holds fixed
     models to 1e-3); a wrong conversion garbles them, so 5% is enough here."""
     assert np.abs(got - ref).max() <= 5e-2 * np.abs(ref).max()
+
+
+def test_quantize_q4_flat_rule():
+    """flat is the fit with every channel equally important: weights sqrt(s2 + x^2)."""
+    rng = np.random.default_rng(3)
+    x = (rng.standard_normal((6, 128)) * rng.uniform(0.01, 2.0, (6, 1))).astype(np.float32)
+    flat = mlb.quantize_q4(x, rule="flat", f16=True)
+    ones = mlb.quantize_q4(x, imp=np.ones(128), f16=True)
+    assert np.array_equal(flat[0], ones[0]) and np.array_equal(flat[1], ones[1])
+    fit = mlb.quantize_q4(x, f16=True)
+    assert not np.array_equal(flat[0], fit[0])
+
+
+def test_hf_q4_auto_rule(tmp_path):
+    """--q4-rule auto: flat for model_type llama (the embedding and the
+    classifier fitted as with fit), fit for the others; an importance matrix
+    goes with fit only."""
+    def conv(d, name, *extra):
+        out = str(tmp_path / name)
+        convert.main(["hf", d, out, "--wtype", "q4", *extra])
+        return out, open(out, "rb").read()
+
+    d, _, _ = _make_hf(tmp_path / "l")   # no model_type: llama
+    auto, auto_b = conv(d, "auto.mlb")
+    flat, flat_b = conv(d, "flat.mlb", "--q4-rule", "flat")
+    fit, fit_b = conv(d, "fit.mlb", "--q4-rule", "fit")
+    assert auto_b == flat_b != fit_b
+    _, tf = mlb.read_mlb(flat)
+    _, tg = mlb.read_mlb(fit)
+    assert np.array_equal(tf["tok_emb"].q, tg["tok_emb"].q) and np.array_equal(tf["tok_emb"].d, tg["tok_emb"].d)
+    assert not np.array_equal(tf["layers"][0]["w1"].q, tg["layers"][0]["w1"].q)
+    d, _, _ = _make_hf(tmp_path / "q", bias=True, model_type="qwen2")
+    assert conv(d, "q_auto.mlb")[1] == conv(d, "q_fit.mlb", "--q4-rule", "fit")[1]
+    for rule in ("flat", "round"):
+        try:
+            convert.main(["hf", d, str(tmp_path / "x.mlb"), "--wtype", "q4", "--q4-rule", rule,
+                          "--imatrix", str(tmp_path / "none.imat")])
+            raise AssertionError(rule)
+        except SystemExit:
+            pass
 
 
 def test_hf_tied_model_runs_in_c(tmp_path):

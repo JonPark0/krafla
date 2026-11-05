@@ -239,6 +239,7 @@ def _q4_round(b):
     at most 15, minus 8. Quantization-aware checkpoints trained for Q4_0
     (Gemma 3 QAT) expect exactly this rounding."""
     mx = np.take_along_axis(b, np.abs(b).argmax(axis=-1)[:, None], axis=-1)[:, 0]
+    mx = np.where(mx == 0, np.float32(0), mx)   # a block of zeros: d = +0 / -8 = -0, as llama.cpp writes it
     d = (mx / np.float32(-8)).astype(np.float32)
     inv = np.where(d != 0, np.float32(1) / np.where(d != 0, d, 1), np.float32(0)).astype(np.float32)
     lv = np.minimum(np.trunc((b * inv[:, None]).astype(np.float32) + np.float32(8.5)), 15) - 8
@@ -261,7 +262,9 @@ def _importance(imp):
 def quantize_q4(x, imp=None, f16=False, rule="fit"):
     """x[..., K] float32 -> (packed uint8[..., K/2], d float32[..., K/32]);
     with f16, d is float16, each scale rounded to nearest. rule "round" takes
-    llama.cpp's Q4_0 rounding (_q4_round) instead of the fit below.
+    llama.cpp's Q4_0 rounding (_q4_round) instead of the fit below; rule
+    "flat" fits with every channel equally important (imp all 1), so that
+    the error is weighted by sqrt(s2 + x^2) as below.
     Byte j of a block holds element j (low nibble) and j+16 (high nibble).
 
     Per block, the element of largest magnitude is mapped to level -8 - step
@@ -277,8 +280,14 @@ def quantize_q4(x, imp=None, f16=False, rule="fit"):
     that weights meeting large activations are kept closer (Qwen2.5 0.5B Q4,
     imatrix from 32K tokens of wikitext-2 train: perplexity 26.47 -> 25.30 on
     16 chunks of the test set; weighting by imp * x^2 did less)."""
+    if rule not in ("fit", "flat", "round"):
+        raise ValueError(f"Q4 rule must be fit, flat or round, not {rule!r}")
+    if rule != "fit" and imp is not None:
+        raise ValueError("an importance matrix weights the fit rule only")
     x = np.asarray(x, np.float32)
     b = x.reshape(-1, QK)
+    if rule == "flat":
+        imp = np.ones(x.shape[-1], np.float32)
     imp = None if imp is None else _importance(imp)
     nb = x.shape[-1] // QK
     if imp is not None:
@@ -287,11 +296,6 @@ def quantize_q4(x, imp=None, f16=False, rule="fit"):
         s2_64 = np.cumsum(_sum32(sq).reshape(-1, nb), axis=1)[:, -1] / x.shape[-1]
         s2 = s2_64.astype(np.float32)
         impb = imp.reshape(nb, QK)
-
-    if rule not in ("fit", "round"):
-        raise ValueError(f"Q4 rule must be fit or round, not {rule!r}")
-    if rule == "round" and imp is not None:
-        raise ValueError("an importance matrix weights the fitted rule only")
 
     def search(i):
         c = b[i:i + 4096]
@@ -404,9 +408,13 @@ def write_mlb(path, cfg, w, wtype, q8=(), imatrix=None, scales="f32", q4_rule="f
     q8: matrix classes (Q8_CLASSES) kept in Q8 when wtype is q4.
     imatrix: read_imatrix's result, weighting the Q4 fits.
     scales: "f32" or "f16", the storage of every matrix's block scales.
-    q4_rule: "fit" or "round" (quantize_q4)."""
+    q4_rule: "fit", "flat" or "round" (quantize_q4). With "flat", the embedding
+    and the classifier are fitted as with "fit": they meet no activations to
+    weight by (llama-imatrix collects neither, so llama.cpp fits them so too)."""
     if scales not in ("f32", "f16"):
         raise ValueError(f"scales must be f32 or f16, not {scales!r}")
+    if imatrix and q4_rule != "fit":
+        raise ValueError("an importance matrix weights the fit rule only")
     f16 = scales == "f16"
     _check_cfg(cfg)
     mask = q8_mask(q8) if wtype == "q4" else 0
@@ -451,7 +459,8 @@ def write_mlb(path, cfg, w, wtype, q8=(), imatrix=None, scales="f32", q4_rule="f
             key = name.split(".")[-1]
             t = matrix_type(key, WTYPES[wtype], mask, shared)
             imp = imatrix_for(imatrix, name, shared) if imatrix else None
-            q, d = quantize_rows(arr, t, imp, f16, q4_rule)
+            rule = "fit" if q4_rule == "flat" and not name.startswith("layers.") else q4_rule
+            q, d = quantize_rows(arr, t, imp, f16, rule)
             put(name + ".q", q)
             put(name + ".d", d)
     return layout

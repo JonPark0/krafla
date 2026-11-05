@@ -5,9 +5,11 @@
                                                       HF Llama, Mistral, Qwen2, Qwen3, Gemma 2, Gemma 3: config.json + *.safetensors
   --imatrix FILE (q4): weight the Q4 fits by an importance matrix from
                        ml_run --imatrix, run on a Q8 conversion of the same model
-  --q4-rule fit|round (q4): fit each block's scale, or llama.cpp's Q4_0 rounding;
-                       the default takes round for Gemma 3 (its QAT checkpoints
-                       expect it) and the fit for the others
+  --q4-rule fit|flat|round (q4): fit each block's scale (weighted by x^2), fit it
+                       weighted as llama.cpp does without an importance matrix,
+                       or llama.cpp's Q4_0 rounding; the default (AUTO_Q4_RULE)
+                       takes round for Gemma 3 (its QAT checkpoints expect it),
+                       flat for model_type llama and the fit for the others
 """
 import argparse
 import glob
@@ -128,6 +130,10 @@ def _unrotate(w, n_heads, rd=None):
 
 
 HF_TYPES = ("llama", "mistral", "qwen2", "qwen3", "qwen3_5_text", "smollm3", "gemma2", "gemma3_text")
+# --q4-rule auto by model_type, without an importance matrix (fit for the
+# others); docs/q4-scales.md has the measurements: rounding for Gemma 3, and
+# flat for seven Llama-architecture models (Llama 3.2, TinyLlama, SmolLM2)
+AUTO_Q4_RULE = {"gemma3_text": "round", "llama": "flat"}
 
 
 def load_qwen35(c, pre, t, max_seq=None):
@@ -372,22 +378,24 @@ def main(argv=None):
     ap.add_argument("--max-seq", type=int, default=None, help="hf: cap the context length the file allows (default: the model's; "
                     "ml_run --ctx sets the KV cache size at run time)")
     ap.add_argument("--imatrix", metavar="FILE", help="q4 only: importance matrix from ml_run --imatrix")
-    ap.add_argument("--q4-rule", choices=("auto", "fit", "round"), default="auto",
-                    help="q4 only: fit each block's scale, or round as llama.cpp's Q4_0 does (better for "
-                         "Gemma 3, and what its quantization-aware checkpoints expect); auto: round for "
-                         "Gemma 3, fit otherwise")
+    ap.add_argument("--q4-rule", choices=("auto", "fit", "flat", "round"), default="auto",
+                    help="q4 only: fit each block's scale (weighted by x^2), fit it weighted as llama.cpp "
+                         "does without an importance matrix (flat: better for Llama-architecture models), "
+                         "or round as llama.cpp's Q4_0 does (better for Gemma 3, and what its "
+                         "quantization-aware checkpoints expect); auto: round for Gemma 3, flat for "
+                         "model_type llama, fit otherwise")
     ap.add_argument("--scales", choices=("f16", "f32"), default="f16",
                     help="storage of the block scales (f16: Q4 4.5 bits per weight, Q8 8.5; f32: 5 and 9)")
     a = ap.parse_args(argv)
     if a.imatrix and a.wtype != "q4":
         ap.error("--imatrix needs --wtype q4")
-    if a.imatrix and a.q4_rule == "round":
-        ap.error("--imatrix weights the fitted Q4 rule only, not --q4-rule round")
+    if a.imatrix and a.q4_rule not in ("auto", "fit"):
+        ap.error(f"--imatrix weights the fit Q4 rule only, not --q4-rule {a.q4_rule}")
     cfg, w = load_llama2c(a.src) if a.kind == "llama2c" else load_hf(a.src, a.max_seq)
     imat = mlb.read_imatrix(a.imatrix, cfg) if a.imatrix else None
     rule = a.q4_rule
     if rule == "auto":   # an importance matrix asks for the fit
-        rule = "round" if cfg.get("model_type") == "gemma3_text" and not imat else "fit"
+        rule = "fit" if imat else AUTO_Q4_RULE.get(cfg.get("model_type"), "fit")
     mlb.write_mlb(a.out, cfg, w, a.wtype, [c for c in a.q8.split(",") if c], imat, a.scales, rule)
     print(f"wrote {a.out}: dim={cfg['dim']} layers={cfg['n_layers']} vocab={cfg['vocab']} "
           f"max_seq={cfg['max_seq']} wtype={a.wtype}{' (q8: ' + a.q8 + ')' if a.q8 and a.wtype == 'q4' else ''} "

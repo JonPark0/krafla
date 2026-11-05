@@ -47,7 +47,9 @@ On Qwen2.5 0.5B with the same Q8_0 and Q4_0 formats on the same machines
   llama.cpp's F16. Its Q4_0 fits each block's scale rather than rounding it
   from the block's maximum. Against llama.cpp's Q4_0 on the same tensors:
   - Without an importance matrix, the KL divergence from the unquantized
-    model is 6–9% lower on four Qwen models and 5% higher on Llama 3.2 1B.
+    model is 6–9% lower on four Qwen models and 1.5–5.6% lower on six of
+    seven Llama-architecture models (Llama 3.2, TinyLlama, SmolLM2), which
+    weight the fit as llama.cpp does.
   - With an importance matrix, llama.cpp's own search matches the fit or
     does better on five of seven models.
   - See [Q4_0 block scales](q4-scales.md).

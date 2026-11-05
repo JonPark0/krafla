@@ -33,10 +33,11 @@ operator is bound to the best kernel for it, with no runtime dispatch.
   ARMv7 NEON boards, with no GPU or external libraries required; static
   binaries for each ISA.
 - **Q4 quality:** each Q4_0 block's scale is fitted rather than rounded from
-  the block's maximum. Against llama.cpp's Q4_0 on the same tensors, the KL
-  divergence from the unquantized model is 6–9% lower on four Qwen models and
-  5% higher on Llama 3.2 1B ([Q4_0 block scales](q4-scales.md)). Q8 matches an F32
-  reference.
+  the block's maximum, with the error weighting chosen per architecture.
+  Against llama.cpp's Q4_0 on the same tensors, the KL divergence from the
+  unquantized model is 6–9% lower on four Qwen models and 1.5–5.6% lower on
+  six of seven Llama-architecture models ([Q4_0 block scales](q4-scales.md)). Q8
+  matches an F32 reference.
 - **Deterministic:** output is bit-identical for any thread count and prompt
   batch size.
 - **Models:** Llama 2/3, Mistral, Qwen2.5, Qwen3, Qwen3.5/3.6, SmolLM2, SmolLM3, Gemma 2 and Gemma 3

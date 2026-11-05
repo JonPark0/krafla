@@ -14,23 +14,39 @@ nav_title: "Changelog"
 
 - [Q4_0 block scales](https://github.com/JonPark0/krafla/blob/main/docs/q4-scales.md),
   a page of the docs site, compares Krafla's fitted Q4_0 scales with
-  llama.cpp's Q4_0 on seven models from 360M to 1.7B. All variants have the
+  llama.cpp's Q4_0 on twelve models from 135M to 3B. All variants have the
   same tensors and are scored by llama-perplexity on 32 chunks: KL divergence
   from the unquantized model, perplexity and same top token. Two scripts
   reproduce the runs:
   - `scripts/q4_patch_gguf.py` rewrites a GGUF's Q4_0 tensors with
-    `tools/mlb.py`.
+    `tools/mlb.py` (`--rule fit|flat|round`, `--tensors REGEX` for some of
+    them).
   - `scripts/compare_q4.sh` builds and scores every variant.
+- `tools/convert.py --q4-rule flat`: the Q4 fit with the error weighted by
+  `sqrt(s2 + x²)`, as llama.cpp weights its importance search when every
+  channel is equally important. The embedding and classifier keep the `x²`
+  fit.
 
 ### Changed
 
+- Q4 conversion of Llama-architecture checkpoints (`model_type` `llama`:
+  Llama, TinyLlama, SmolLM2) now uses `--q4-rule flat` by default, without an
+  importance matrix. On seven such models, from 135M to 3B, it is closer to
+  the unquantized model than the `x²` fit on all seven, by 0.6–9%, and than
+  llama.cpp's Q4_0 on six, by 1.5–5.6% in KL divergence. The `x²` fit was 10%
+  worse than llama.cpp's Q4_0 to 3% better on them. Other architectures keep
+  their rules. Q4 files converted earlier still load; convert again for the
+  new scales.
+- `--q4-rule round` writes `d` = -0 for a block of zeros, as llama.cpp does,
+  so that its bytes equal `llama-quantize`'s in every block (TinyLlama's
+  embedding has such blocks). The values are unchanged.
 - The README, the docs home page, the FAQ and the Korean page no longer claim
   a lower Q4 perplexity from a 4-chunk run (Qwen2.5 0.5B, 15.1 against
   15.8–15.9). On 32 chunks the two rules score 15.88 and 16.11. Without an
-  importance matrix, the fitted scales lower the KL divergence by 6–9% on four
-  Qwen models and raise it by 5% on Llama 3.2 1B. With an importance matrix,
-  llama.cpp's own search matches the fit or does better on five of the seven
-  models.
+  importance matrix, the default rules lower the KL divergence by 6–9% on four
+  Qwen models and by 1.5–5.6% on six of seven Llama-architecture models. With
+  an importance matrix, llama.cpp's own search matches the fit or does better
+  on five of the seven models tried.
 
 ## 0.9.1 — 2026-11-05
 
