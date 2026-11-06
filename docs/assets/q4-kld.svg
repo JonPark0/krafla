@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 516" width="760" height="516" role="img" aria-labelledby="q4-title q4-desc" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<title id="q4-title">Q4_0 KL divergence against llama.cpp's rounding</title>
+<desc id="q4-desc">Qwen2.5 0.5B Instruct: fit -6.4%, flat -11.7%; Qwen3 0.6B: fit -7.3%, flat -13.9%; Qwen3.5 0.8B: fit -6.2%, flat -7.7%; Qwen3 1.7B: fit -8.8%, flat +3.8%; SmolLM2 135M Instruct: fit -3.4%, flat -5.4%; SmolLM2 360M Instruct: fit -0.9%, flat -1.5%; TinyLlama 1.1B Chat v1.0: fit +3.6%, flat -4.1%; TinyLlama v1.1: fit +9.6%, flat +3.5%; Llama 3.2 1B Instruct: fit +5.4%, flat -3.9%; SmolLM2 1.7B Instruct: fit -2.3%, flat -5.7%; Llama 3.2 3B Instruct: fit -1.2%, flat -5.1%; Gemma 3 1B it: fit +5.1%, flat +2.7%</desc>
+<style>
+.bg{fill:#fff;stroke:#e5e7eb}.t{fill:#1f2937}.m{fill:#6b7280}.g{stroke:#eceef1}.ax{stroke:#9ca3af}.s1{fill:#2a78d6}.s2{fill:#eb6834}.lb{fill:#fff}.ring{stroke:#fff}.cn{stroke:#c9ccd1}.h{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+@media (prefers-color-scheme:dark){.bg{fill:#1f2023;stroke:#3a3b40}.t{fill:#e5e7eb}.m{fill:#9ca3af}.g{stroke:#2e3035}.ax{stroke:#6b7280}.s1{fill:#3987e5}.s2{fill:#d95926}.lb{fill:#1f2023}.ring{stroke:#1f2023}.cn{stroke:#4b4f57}.h{stroke:#1f2023}}
+</style>
+<rect class="bg" x="0.5" y="0.5" width="759" height="515" rx="8"/>
+<text class="t" x="20" y="32" font-size="17" font-weight="600">Q4_0 KL divergence against llama.cpp's rounding</text>
+<text class="m" x="20" y="54" font-size="13">Change from llama.cpp's Q4_0, no importance matrix; left of 0 is closer to the unquantized model</text>
+<circle class="s2" cx="687.2" cy="74" r="5"/>
+<text class="t" x="698.2" y="79" font-size="13">flat</text>
+<circle class="s1" cx="599.6" cy="74" r="5"/>
+<text class="t" x="610.6" y="79" font-size="13">fit (x²)</text>
+<line class="g" x1="200.0" y1="86" x2="200.0" y2="464"/>
+<text class="m" x="200.0" y="482" font-size="12" text-anchor="middle">−15%</text>
+<line class="g" x1="304.8" y1="86" x2="304.8" y2="464"/>
+<text class="m" x="304.8" y="482" font-size="12" text-anchor="middle">−10%</text>
+<line class="g" x1="409.6" y1="86" x2="409.6" y2="464"/>
+<text class="m" x="409.6" y="482" font-size="12" text-anchor="middle">−5%</text>
+<line class="g" x1="514.4" y1="86" x2="514.4" y2="464"/>
+<text class="m" x="514.4" y="482" font-size="12" text-anchor="middle">0%</text>
+<line class="g" x1="619.2" y1="86" x2="619.2" y2="464"/>
+<text class="m" x="619.2" y="482" font-size="12" text-anchor="middle">+5%</text>
+<line class="g" x1="724.0" y1="86" x2="724.0" y2="464"/>
+<text class="m" x="724.0" y="482" font-size="12" text-anchor="middle">+10%</text>
+<rect class="lb" x="12" y="92" width="736" height="20"/>
+<text class="m" x="20" y="106" font-size="12" font-weight="600">Qwen · default: fit</text>
+<line class="ax" x1="514.4" y1="116" x2="514.4" y2="212" stroke-width="1.5"/>
+<text class="t" x="188" y="132.0" font-size="13" text-anchor="end">Qwen2.5 0.5B Instruct</text>
+<line class="cn" x1="379.4" y1="128.0" x2="268.9" y2="128.0" stroke-width="2"/>
+<circle class="s1 ring" cx="379.4" cy="128.0" r="5" stroke-width="2"/>
+<circle class="s2 ring" cx="268.9" cy="128.0" r="5" stroke-width="2"/>
+<text class="t" x="188" y="156.0" font-size="13" text-anchor="end">Qwen3 0.6B</text>
+<line class="cn" x1="362.3" y1="152.0" x2="223.4" y2="152.0" stroke-width="2"/>
+<circle class="s1 ring" cx="362.3" cy="152.0" r="5" stroke-width="2"/>
+<circle class="s2 ring" cx="223.4" cy="152.0" r="5" stroke-width="2"/>
+<text class="t" x="188" y="180.0" font-size="13" text-anchor="end">Qwen3.5 0.8B</text>
+<line class="cn" x1="384.2" y1="176.0" x2="352.8" y2="176.0" stroke-width="2"/>
+<circle class="s1 ring" cx="384.2" cy="176.0" r="5" stroke-width="2"/>
+<circle class="s2 ring" cx="352.8" cy="176.0" r="5" stroke-width="2"/>
+<text class="t" x="188" y="204.0" font-size="13" text-anchor="end">Qwen3 1.7B</text>
+<line class="cn" x1="329.4" y1="200.0" x2="593.8" y2="200.0" stroke-width="2"/>
+<circle class="s1 ring" cx="329.4" cy="200.0" r="5" stroke-width="2"/>
+<circle class="s2 ring" cx="593.8" cy="200.0" r="5" stroke-width="2"/>
+<rect class="lb" x="12" y="218" width="736" height="20"/>
+<text class="m" x="20" y="232" font-size="12" font-weight="600">Llama architecture · default: flat</text>
+<line class="ax" x1="514.4" y1="242" x2="514.4" y2="410" stroke-width="1.5"/>
+<text class="t" x="188" y="258.0" font-size="13" text-anchor="end">SmolLM2 135M Instruct</text>
+<line class="cn" x1="443.4" y1="254.0" x2="400.2" y2="254.0" stroke-width="2"/>
+<circle class="s1 ring" cx="443.4" cy="254.0" r="5" stroke-width="2"/>
+<circle class="s2 ring" cx="400.2" cy="254.0" r="5" stroke-width="2"/>
+<text class="t" x="188" y="282.0" font-size="13" text-anchor="end">SmolLM2 360M Instruct</text>
+<line class="cn" x1="494.9" y1="278.0" x2="482.0" y2="278.0" stroke-width="2"/>
+<circle class="s1 ring" cx="494.9" cy="278.0" r="5" stroke-width="2"/>
+<circle class="s2 ring" cx="482.0" cy="278.0" r="5" stroke-width="2"/>
+<text class="t" x="188" y="306.0" font-size="13" text-anchor="end">TinyLlama 1.1B Chat v1.0</text>
+<line class="cn" x1="589.4" y1="302.0" x2="427.6" y2="302.0" stroke-width="2"/>
+<circle class="s1 ring" cx="589.4" cy="302.0" r="5" stroke-width="2"/>
+<circle class="s2 ring" cx="427.6" cy="302.0" r="5" stroke-width="2"/>
+<text class="t" x="188" y="330.0" font-size="13" text-anchor="end">TinyLlama v1.1</text>
+<line class="cn" x1="715.4" y1="326.0" x2="587.8" y2="326.0" stroke-width="2"/>
+<circle class="s1 ring" cx="715.4" cy="326.0" r="5" stroke-width="2"/>
+<circle class="s2 ring" cx="587.8" cy="326.0" r="5" stroke-width="2"/>
+<text class="t" x="188" y="354.0" font-size="13" text-anchor="end">Llama 3.2 1B Instruct</text>
+<line class="cn" x1="627.1" y1="350.0" x2="432.5" y2="350.0" stroke-width="2"/>
+<circle class="s1 ring" cx="627.1" cy="350.0" r="5" stroke-width="2"/>
+<circle class="s2 ring" cx="432.5" cy="350.0" r="5" stroke-width="2"/>
+<text class="t" x="188" y="378.0" font-size="13" text-anchor="end">SmolLM2 1.7B Instruct</text>
+<line class="cn" x1="465.6" y1="374.0" x2="395.5" y2="374.0" stroke-width="2"/>
+<circle class="s1 ring" cx="465.6" cy="374.0" r="5" stroke-width="2"/>
+<circle class="s2 ring" cx="395.5" cy="374.0" r="5" stroke-width="2"/>
+<text class="t" x="188" y="402.0" font-size="13" text-anchor="end">Llama 3.2 3B Instruct</text>
+<line class="cn" x1="489.8" y1="398.0" x2="406.8" y2="398.0" stroke-width="2"/>
+<circle class="s1 ring" cx="489.8" cy="398.0" r="5" stroke-width="2"/>
+<circle class="s2 ring" cx="406.8" cy="398.0" r="5" stroke-width="2"/>
+<rect class="lb" x="12" y="416" width="736" height="20"/>
+<text class="m" x="20" y="430" font-size="12" font-weight="600">Gemma 3 · default: rounded (0%)</text>
+<line class="ax" x1="514.4" y1="440" x2="514.4" y2="464" stroke-width="1.5"/>
+<text class="t" x="188" y="456.0" font-size="13" text-anchor="end">Gemma 3 1B it</text>
+<line class="cn" x1="620.9" y1="452.0" x2="571.1" y2="452.0" stroke-width="2"/>
+<circle class="s1 ring" cx="620.9" cy="452.0" r="5" stroke-width="2"/>
+<circle class="s2 ring" cx="571.1" cy="452.0" r="5" stroke-width="2"/>
+<text class="m" x="514.4" y="500" font-size="12" text-anchor="middle">llama.cpp's Q4_0 = 0</text>
+<text class="m" x="200" y="500" font-size="12">← closer</text>
+<text class="m" x="724" y="500" font-size="12" text-anchor="end">further →</text>
+</svg>

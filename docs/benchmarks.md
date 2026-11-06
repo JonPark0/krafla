@@ -93,6 +93,11 @@ run.
   1.07–1.16× for Q8_0 and by up to 1.17× for Q4_0. From AVX2 down, Krafla
   prefills faster (1.4–6.4×).
 
+![Krafla prefill speed relative to llama.cpp at each ISA level, one thread: below 1× with AVX-512 VNNI and for dotprod Q4_0, 1.1 to 6.4 times elsewhere](assets/prefill-ratio.svg)
+
+The chart shows the one-thread prefill ratios (Krafla's prefill speed divided
+by llama.cpp's) of this table and the [AArch64](#aarch64) one.
+
 The native llama.cpp build gets its prefill speed from AMX, not from AVX-512
 VNNI: by default it repacks its weights for AMX tiles. With repacking turned
 off (`llama-bench --repack 0`, on the same machine in a later run), it
@@ -226,10 +231,12 @@ Q8_0 matches F16. Its Q4_0 scores lower than llama.cpp's because
 without an importance matrix maps the largest weight to -8.
 
 Four chunks (about 1,000 scored tokens) overstate that gap. On 32 chunks the
-two rules score 15.88 and 16.11 for this model. Across seven models, the
-fitted scales lower the KL divergence from the unquantized model on five of
-them. They raise it on Llama 3.2 1B, and on Gemma 3, which the converter
-therefore rounds. See [Q4_0 block scales](q4-scales.md). llama.cpp's
+two rules score 15.88 and 16.11 for this model. Across twelve models, the
+converter's default rules lower the KL divergence from the unquantized model
+on ten: the fit on four Qwen models, and the fit weighted as llama.cpp
+weights (`--q4-rule flat`) on six of seven Llama-architecture models. Gemma 3
+does better rounded, which the converter therefore does. See
+[Q4_0 block scales](q4-scales.md). llama.cpp's
 default Q4_0 (without `--pure`) keeps the classifier in a higher-precision
 type, which Krafla can do with `--q8 cls`. Neither row uses an importance
 matrix; with one collected on the wikitext-2 training set, Krafla's Q4_0

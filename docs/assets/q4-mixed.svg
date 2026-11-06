@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 380" width="760" height="380" role="img" aria-labelledby="mix-title mix-desc" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<title id="mix-title">Llama 3.2 1B: file size against perplexity</title>
+<desc id="mix-desc">Q8: 1252 MiB, perplexity 17.27; Q4 + Q8 v,o,down: 831 MiB, perplexity 17.86; Q4 + Q8 v,down: 799 MiB, perplexity 18.07; Q4 + Q8 emb,cls: 788 MiB, perplexity 19.51; Q4: 663 MiB, perplexity 19.67</desc>
+<style>
+.bg{fill:#fff;stroke:#e5e7eb}.t{fill:#1f2937}.m{fill:#6b7280}.g{stroke:#eceef1}.ax{stroke:#9ca3af}.s1{fill:#2a78d6}.s2{fill:#eb6834}.lb{fill:#fff}.ring{stroke:#fff}.cn{stroke:#c9ccd1}.h{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+@media (prefers-color-scheme:dark){.bg{fill:#1f2023;stroke:#3a3b40}.t{fill:#e5e7eb}.m{fill:#9ca3af}.g{stroke:#2e3035}.ax{stroke:#6b7280}.s1{fill:#3987e5}.s2{fill:#d95926}.lb{fill:#1f2023}.ring{stroke:#1f2023}.cn{stroke:#4b4f57}.h{stroke:#1f2023}}
+</style>
+<rect class="bg" x="0.5" y="0.5" width="759" height="379" rx="8"/>
+<text class="t" x="20" y="32" font-size="17" font-weight="600">Llama 3.2 1B: file size against perplexity</text>
+<text class="m" x="20" y="54" font-size="13">Q4 with some matrix classes kept in Q8 (--q8); lower left is better</text>
+<line class="g" x1="64" y1="328.0" x2="720" y2="328.0"/>
+<text class="m" x="56" y="332.0" font-size="12" text-anchor="end">17.0</text>
+<line class="g" x1="64" y1="287.7" x2="720" y2="287.7"/>
+<text class="m" x="56" y="291.7" font-size="12" text-anchor="end">17.5</text>
+<line class="g" x1="64" y1="247.3" x2="720" y2="247.3"/>
+<text class="m" x="56" y="251.3" font-size="12" text-anchor="end">18.0</text>
+<line class="g" x1="64" y1="207.0" x2="720" y2="207.0"/>
+<text class="m" x="56" y="211.0" font-size="12" text-anchor="end">18.5</text>
+<line class="g" x1="64" y1="166.7" x2="720" y2="166.7"/>
+<text class="m" x="56" y="170.7" font-size="12" text-anchor="end">19.0</text>
+<line class="g" x1="64" y1="126.3" x2="720" y2="126.3"/>
+<text class="m" x="56" y="130.3" font-size="12" text-anchor="end">19.5</text>
+<line class="g" x1="64" y1="86.0" x2="720" y2="86.0"/>
+<text class="m" x="56" y="90.0" font-size="12" text-anchor="end">20.0</text>
+<text class="m" x="64.0" y="346" font-size="12" text-anchor="middle">600</text>
+<text class="m" x="157.7" y="346" font-size="12" text-anchor="middle">700</text>
+<text class="m" x="251.4" y="346" font-size="12" text-anchor="middle">800</text>
+<text class="m" x="345.1" y="346" font-size="12" text-anchor="middle">900</text>
+<text class="m" x="438.9" y="346" font-size="12" text-anchor="middle">1000</text>
+<text class="m" x="532.6" y="346" font-size="12" text-anchor="middle">1100</text>
+<text class="m" x="626.3" y="346" font-size="12" text-anchor="middle">1200</text>
+<text class="m" x="720.0" y="346" font-size="12" text-anchor="middle">1300</text>
+<line class="ax" x1="64" y1="328" x2="720" y2="328"/>
+<text class="m" x="392.0" y="366" font-size="12" text-anchor="middle">file size (MiB)</text>
+<text class="m" x="20" y="76" font-size="12">perplexity</text>
+<circle class="s1 ring" cx="675.0" cy="306.2" r="5" stroke-width="2"/>
+<text class="t h" x="685.0" y="310.2" font-size="12" text-anchor="start">Q8 · 17.27</text>
+<circle class="s1 ring" cx="280.5" cy="258.6" r="5" stroke-width="2"/>
+<text class="t h" x="290.5" y="262.6" font-size="12" text-anchor="start">Q4 + Q8 v,o,down · 17.86</text>
+<circle class="s1 ring" cx="250.5" cy="241.7" r="5" stroke-width="2"/>
+<text class="t h" x="240.5" y="245.7" font-size="12" text-anchor="end">Q4 + Q8 v,down · 18.07</text>
+<circle class="s1 ring" cx="240.2" cy="125.5" r="5" stroke-width="2"/>
+<text class="t h" x="250.2" y="129.5" font-size="12" text-anchor="start">Q4 + Q8 emb,cls · 19.51</text>
+<circle class="s1 ring" cx="123.0" cy="112.6" r="5" stroke-width="2"/>
+<text class="t h" x="133.0" y="116.6" font-size="12" text-anchor="start">Q4 · 19.67</text>
+</svg>

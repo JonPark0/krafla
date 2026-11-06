@@ -2,7 +2,7 @@
 llama.cpp's tools can score Krafla's rule on the same tensors as its own.
 
     scripts/q4_patch_gguf.py REF.gguf TARGET.gguf [--imatrix IMAT.gguf]
-        [--rule fit|round] [--check]
+        [--rule fit|flat|round] [--tensors REGEX] [--check]
 
 REF holds the unquantized weights (F16, BF16 or F32); TARGET is a Q4_0 GGUF of
 the same model made with `llama-quantize --pure`. Each of TARGET's Q4_0
@@ -11,14 +11,18 @@ scales) and written in place: Krafla's Q4 block is GGML's block_q4_0 (f16
 scale, then 16 bytes holding element j in the low nibble and j + 16 in the
 high one, value d * (q - 8)). --imatrix takes a llama-imatrix GGUF and gives
 each matrix its mean squared inputs, as llama-quantize does; an entry whose
-count is 0 gives every channel the same importance. --check compares instead
-of writing: with --rule round the blocks must equal llama-quantize's Q4_0.
+count is 0 gives every channel the same importance, as --rule flat does
+without a file (token_embd and output then keep the plain fit, as
+tools/convert.py does). --tensors rewrites only the tensors whose names
+match and leaves the others as TARGET has them. --check compares instead of
+writing: with --rule round the blocks must equal llama-quantize's Q4_0.
 
 Needs llama.cpp's gguf-py: set GGUF_PY to its directory (llama.cpp/gguf-py)
 or install the gguf package. docs/q4-scales.md describes the measurements.
 """
 import argparse
 import os
+import re
 import sys
 import time
 
@@ -54,9 +58,12 @@ def main():
     ap.add_argument("ref")
     ap.add_argument("target")
     ap.add_argument("--imatrix")
-    ap.add_argument("--rule", default="fit", choices=("fit", "round"))
+    ap.add_argument("--rule", default="fit", choices=("fit", "flat", "round"))
+    ap.add_argument("--tensors", metavar="REGEX", help="only the tensors whose names match (re.search)")
     ap.add_argument("--check", action="store_true")
     a = ap.parse_args()
+    if a.imatrix and a.rule != "fit":
+        ap.error("--imatrix weights the fit rule only")
 
     ref = {x.name: x for x in gguf.GGUFReader(a.ref).tensors}
     tgt = gguf.GGUFReader(a.target)
@@ -65,14 +72,15 @@ def main():
     n = same = blocks = weighted = 0
     t0 = time.time()
     for x in tgt.tensors:
-        if x.tensor_type != gguf.GGMLQuantizationType.Q4_0:
+        if x.tensor_type != gguf.GGMLQuantizationType.Q4_0 or (a.tensors and not re.search(a.tensors, x.name)):
             continue
         r = ref[x.name]
         cols = int(x.shape[0])   # ne0, the row length
         w = dequantize(r.data, r.tensor_type).astype(np.float32).reshape(-1, cols)
         imp = imat.get(x.name)
         weighted += imp is not None
-        q, d = mlb.quantize_q4(w, imp=imp, f16=True, rule=a.rule)
+        rule = "fit" if a.rule == "flat" and not x.name.startswith("blk.") else a.rule
+        q, d = mlb.quantize_q4(w, imp=imp, f16=True, rule=rule)
         nb = cols // 32
         q = np.asarray(q, np.uint8).reshape(-1, nb, 16)
         d = np.asarray(d, np.float16).reshape(-1, nb, 1).view(np.uint8)

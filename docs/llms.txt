@@ -18,7 +18,7 @@ Key facts:
 - [User guide](https://raw.githubusercontent.com/JonPark0/krafla/main/docs/user-guide.md): building, converting models, CLI options, threads, limits
 - [Server](https://raw.githubusercontent.com/JonPark0/krafla/main/docs/server.md): ml_server, an OpenAI-compatible HTTP API (chat and text completions, streaming, KV cache kept between turns)
 - [Comparison with llama.cpp](https://raw.githubusercontent.com/JonPark0/krafla/main/docs/benchmarks.md): speed and perplexity per ISA level
-- [Q4_0 block scales](https://raw.githubusercontent.com/JonPark0/krafla/main/docs/q4-scales.md): Krafla's fitted Q4_0 scales against llama.cpp's rounding and importance-matrix search, KL divergence on seven models
+- [Q4_0 block scales](https://raw.githubusercontent.com/JonPark0/krafla/main/docs/q4-scales.md): Krafla's fitted Q4_0 scales against llama.cpp's rounding and importance-matrix search, KL divergence on twelve models
 - [Architecture](https://raw.githubusercontent.com/JonPark0/krafla/main/docs/architecture.md): compile-time kernel binding, CPU guard, packing, threading
 - [README](https://raw.githubusercontent.com/JonPark0/krafla/main/README.md): overview, quick start, status
 

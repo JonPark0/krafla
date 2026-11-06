@@ -339,14 +339,18 @@ sizes are in MiB. Decode speed is on 4 vCPUs with the avx512vnni build.
 | Weights | Size | Perplexity | Decode `-t 4` |
 |---------|-----:|-----------:|--------------:|
 | Q8 | 1252 MiB | 17.27 | 35.0 tok/s |
-| Q4 + Q8 `v,o,down` | 831 MiB | 17.89 | 47.7 tok/s |
-| Q4 + Q8 `v,down` | 799 MiB | 18.10 | |
-| Q4 | 663 MiB | 19.91 | 64.1 tok/s |
+| Q4 + Q8 `v,o,down` | 831 MiB | 17.86 | 47.7 tok/s |
+| Q4 + Q8 `v,down` | 799 MiB | 18.07 | |
+| Q4 + Q8 `emb,cls` | 788 MiB | 19.51 | |
+| Q4 | 663 MiB | 19.67 | 64.1 tok/s |
+
+![Llama 3.2 1B file size against perplexity: Q8 1252 MiB 17.27, Q4 with v,o,down in Q8 831 MiB 17.86, with v,down 799 MiB 18.07, with emb,cls 788 MiB 19.51, Q4 663 MiB 19.67](assets/q4-mixed.svg)
 
 The down projection (`down`) and the value and output projections (`v`, `o`)
-matter most. The Q8 KV cache costs nothing measurable here: `--kv q8` on the
-Q8 model gives 17.27. The embedding and classifier (`emb`, `cls`) are large
-for a 128K vocabulary and help little (Q4 + `emb,cls`: 788 MiB, 19.87).
+matter most: keeping them in Q8 recovers three quarters of the gap to Q8 for
+under a third of its extra size. The embedding and classifier (`emb`, `cls`)
+are large for a 128K vocabulary and help little. The Q8 KV cache costs nothing
+measurable here: `--kv q8` on the Q8 model gives 17.27.
 
 Qwen2.5 0.5B Instruct on the same text and machine. Qwen2.5 adds no BOS, and
 the F32 numpy reference scores 19.00:
@@ -367,13 +371,13 @@ unchanged, so older Q4 files still load; convert again to get the better
 scales. See [the quantization rule](file-format.md#quantization-rule).
 
 Other models on the same text, all with f16 scales. The F32 column is the
-numpy reference, and the Q4 column uses the converter's default rule, which
-fits the scales of every model but Gemma 3 (see below):
+numpy reference, and the Q4 column uses the converter's default rule for
+each model (see below):
 
 | Model | F32 | Q8 | Q4 |
 |-------|----:|---:|---:|
 | Qwen3 0.6B | 28.10 | 27.90 | 31.69 |
-| SmolLM2 135M Instruct | 23.44 | 23.62 | 31.60 |
+| SmolLM2 135M Instruct | 23.44 | 23.62 | 31.25 |
 | Gemma 3 1B Instruct | 42.32 | 41.97 | 49.83 |
 | Gemma 3 4B Instruct | — | 24.30 | 23.31 |
 
@@ -390,12 +394,27 @@ quantization-aware checkpoint (`gemma-3-1b-it-qat-q4_0-unquantized`) was
 trained for exactly that rounding; rounded, it scores 40.50 at 536 MiB, below
 its own Q8 (42.53) and below the regular checkpoint's F32 reference. The fit
 gives 47.43 on it. The converter therefore rounds Gemma 3 checkpoints by
-default and fits the others; `--q4-rule fit|round` overrides it.
+default.
+
+Llama-architecture checkpoints (`model_type` `llama`: Llama 3.2, TinyLlama,
+SmolLM2) get a third rule, `flat`. It is the fit with each weight's error
+weighted by `sqrt(s2 + x²)`, where `s2` is the row's mean x², as llama.cpp
+weights its importance search when every channel counts the same. On seven
+such models it came closer to the unquantized model than the plain fit on
+all seven, and than llama.cpp's rounding on six
+([Q4_0 block scales](q4-scales.md#llama-architecture-models)). The other
+models are fitted by x². `--q4-rule fit|flat|round` overrides the choice.
 
 | Q4 rule (f16 scales) | Qwen2.5 0.5B | Llama 3.2 1B | Qwen3 0.6B | SmolLM2 135M | Gemma 3 1B | Gemma 3 1B QAT |
 |---|---:|---:|---:|---:|---:|---:|
-| fit | **21.73** | **19.90** | **31.69** | **31.60** | 53.25 | 47.43 |
+| fit | **21.73** | 19.90 | **31.69** | 31.60 | 53.25 | 47.43 |
+| flat | 22.25 | **19.67** | 33.11 | **31.25** | — | — |
 | round | 22.45 | 19.94 | 31.75 | 32.31 | **49.83** | **40.50** |
+
+On these 2044 tokens `flat` loses to the fit on both Qwen models. Over 8,192
+tokens it is ahead on Qwen3 0.6B (21.49 against 21.70 with
+`tools/perplexity.py --llama-cpp`), but 14% behind in KL divergence on Qwen3
+1.7B, so Qwen keeps the fit.
 
 An importance matrix (`--imatrix`) tells the fit which weights matter most.
 It records how large each input channel's activations are on sample text, and

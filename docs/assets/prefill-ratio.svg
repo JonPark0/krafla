@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 442" width="760" height="442" role="img" aria-labelledby="pr-title pr-desc" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<title id="pr-title">Prefill speed against llama.cpp, one thread</title>
+<desc id="pr-desc">AVX-512 VNNI: Q4_0 0.98x, Q8_0 0.86x; AVX2: Q4_0 2.21x, Q8_0 1.36x; SSE4.1 / SSE4.2: Q4_0 2.41x, Q8_0 3.43x; SSE2: Q4_0 6.44x, Q8_0 3.09x; i8mm: Q4_0 1.17x, Q8_0 1.44x; dotprod: Q4_0 0.88x, Q8_0 1.14x; NEON (Armv8.0): Q4_0 1.69x, Q8_0 1.37x</desc>
+<style>
+.bg{fill:#fff;stroke:#e5e7eb}.t{fill:#1f2937}.m{fill:#6b7280}.g{stroke:#eceef1}.ax{stroke:#9ca3af}.s1{fill:#2a78d6}.s2{fill:#eb6834}.lb{fill:#fff}.ring{stroke:#fff}.cn{stroke:#c9ccd1}.h{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+@media (prefers-color-scheme:dark){.bg{fill:#1f2023;stroke:#3a3b40}.t{fill:#e5e7eb}.m{fill:#9ca3af}.g{stroke:#2e3035}.ax{stroke:#6b7280}.s1{fill:#3987e5}.s2{fill:#d95926}.lb{fill:#1f2023}.ring{stroke:#1f2023}.cn{stroke:#4b4f57}.h{stroke:#1f2023}}
+</style>
+<rect class="bg" x="0.5" y="0.5" width="759" height="441" rx="8"/>
+<text class="t" x="20" y="32" font-size="17" font-weight="600">Prefill speed against llama.cpp, one thread</text>
+<text class="m" x="20" y="54" font-size="13">Qwen2.5 0.5B Instruct, 128-token prompt; above 1× Krafla is faster</text>
+<rect class="s2" x="681.2" y="68" width="12" height="12" rx="3"/>
+<text class="t" x="698.2" y="79" font-size="13">Q8_0</text>
+<rect class="s1" x="622.4000000000001" y="68" width="12" height="12" rx="3"/>
+<text class="t" x="639.4000000000001" y="79" font-size="13">Q4_0</text>
+<line class="g" x1="170.0" y1="86" x2="170.0" y2="398"/>
+<text class="m" x="170.0" y="416" font-size="12" text-anchor="middle">0×</text>
+<line class="g" x1="248.6" y1="86" x2="248.6" y2="398"/>
+<text class="m" x="248.6" y="416" font-size="12" text-anchor="middle">1×</text>
+<line class="g" x1="327.1" y1="86" x2="327.1" y2="398"/>
+<text class="m" x="327.1" y="416" font-size="12" text-anchor="middle">2×</text>
+<line class="g" x1="405.7" y1="86" x2="405.7" y2="398"/>
+<text class="m" x="405.7" y="416" font-size="12" text-anchor="middle">3×</text>
+<line class="g" x1="484.3" y1="86" x2="484.3" y2="398"/>
+<text class="m" x="484.3" y="416" font-size="12" text-anchor="middle">4×</text>
+<line class="g" x1="562.9" y1="86" x2="562.9" y2="398"/>
+<text class="m" x="562.9" y="416" font-size="12" text-anchor="middle">5×</text>
+<line class="g" x1="641.4" y1="86" x2="641.4" y2="398"/>
+<text class="m" x="641.4" y="416" font-size="12" text-anchor="middle">6×</text>
+<line class="g" x1="720.0" y1="86" x2="720.0" y2="398"/>
+<text class="m" x="720.0" y="416" font-size="12" text-anchor="middle">7×</text>
+<rect class="lb" x="12" y="92" width="736" height="20"/>
+<text class="m" x="20" y="106" font-size="12" font-weight="600">x86-64 · Intel Xeon (Emerald Rapids), 4 vCPUs</text>
+<line class="ax" x1="248.6" y1="116" x2="248.6" y2="260" stroke-width="1.5"/>
+<text class="t" x="158" y="138.0" font-size="13" text-anchor="end">AVX-512 VNNI</text>
+<path class="s1" d="M170.0,121.0h72.6a4,4 0 0 1 4,4v4.0a4,4 0 0 1 -4,4h-72.6z"/>
+<text class="t h" x="251.6" y="131.0" font-size="11">0.98×</text>
+<path class="s2" d="M170.0,135.0h63.9a4,4 0 0 1 4,4v4.0a4,4 0 0 1 -4,4h-63.9z"/>
+<text class="t h" x="242.9" y="145.0" font-size="11">0.86×</text>
+<text class="t" x="158" y="174.0" font-size="13" text-anchor="end">AVX2</text>
+<path class="s1" d="M170.0,157.0h169.5a4,4 0 0 1 4,4v4.0a4,4 0 0 1 -4,4h-169.5z"/>
+<text class="t h" x="348.5" y="167.0" font-size="11">2.21×</text>
+<path class="s2" d="M170.0,171.0h102.7a4,4 0 0 1 4,4v4.0a4,4 0 0 1 -4,4h-102.7z"/>
+<text class="t h" x="281.7" y="181.0" font-size="11">1.36×</text>
+<text class="t" x="158" y="210.0" font-size="13" text-anchor="end">SSE4.1 / SSE4.2</text>
+<path class="s1" d="M170.0,193.0h185.6a4,4 0 0 1 4,4v4.0a4,4 0 0 1 -4,4h-185.6z"/>
+<text class="t h" x="364.6" y="203.0" font-size="11">2.41×</text>
+<path class="s2" d="M170.0,207.0h265.6a4,4 0 0 1 4,4v4.0a4,4 0 0 1 -4,4h-265.6z"/>
+<text class="t h" x="444.6" y="217.0" font-size="11">3.43×</text>
+<text class="t" x="158" y="246.0" font-size="13" text-anchor="end">SSE2</text>
+<path class="s1" d="M170.0,229.0h501.9a4,4 0 0 1 4,4v4.0a4,4 0 0 1 -4,4h-501.9z"/>
+<text class="t h" x="680.9" y="239.0" font-size="11">6.44×</text>
+<path class="s2" d="M170.0,243.0h239.1a4,4 0 0 1 4,4v4.0a4,4 0 0 1 -4,4h-239.1z"/>
+<text class="t h" x="418.1" y="253.0" font-size="11">3.09×</text>
+<rect class="lb" x="12" y="266" width="736" height="20"/>
+<text class="m" x="20" y="280" font-size="12" font-weight="600">AArch64 · GitHub Arm runner, 4 vCPUs</text>
+<line class="ax" x1="248.6" y1="290" x2="248.6" y2="398" stroke-width="1.5"/>
+<text class="t" x="158" y="312.0" font-size="13" text-anchor="end">i8mm</text>
+<path class="s1" d="M170.0,295.0h87.7a4,4 0 0 1 4,4v4.0a4,4 0 0 1 -4,4h-87.7z"/>
+<text class="t h" x="266.7" y="305.0" font-size="11">1.17×</text>
+<path class="s2" d="M170.0,309.0h108.9a4,4 0 0 1 4,4v4.0a4,4 0 0 1 -4,4h-108.9z"/>
+<text class="t h" x="287.9" y="319.0" font-size="11">1.44×</text>
+<text class="t" x="158" y="348.0" font-size="13" text-anchor="end">dotprod</text>
+<path class="s1" d="M170.0,331.0h65.3a4,4 0 0 1 4,4v4.0a4,4 0 0 1 -4,4h-65.3z"/>
+<text class="t h" x="244.3" y="341.0" font-size="11">0.88×</text>
+<path class="s2" d="M170.0,345.0h85.8a4,4 0 0 1 4,4v4.0a4,4 0 0 1 -4,4h-85.8z"/>
+<text class="t h" x="264.8" y="355.0" font-size="11">1.14×</text>
+<text class="t" x="158" y="384.0" font-size="13" text-anchor="end">NEON (Armv8.0)</text>
+<path class="s1" d="M170.0,367.0h128.9a4,4 0 0 1 4,4v4.0a4,4 0 0 1 -4,4h-128.9z"/>
+<text class="t h" x="307.9" y="377.0" font-size="11">1.69×</text>
+<path class="s2" d="M170.0,381.0h103.4a4,4 0 0 1 4,4v4.0a4,4 0 0 1 -4,4h-103.4z"/>
+<text class="t h" x="282.4" y="391.0" font-size="11">1.37×</text>
+<text class="m" x="252.6" y="432" font-size="12">llama.cpp = 1×</text>
+</svg>

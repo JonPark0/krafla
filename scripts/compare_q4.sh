@@ -13,9 +13,12 @@
 # scored (CHUNKS chunks of 512, default 32). OUT (default build/q4) gets a log
 # per variant; VARIANTS picks some of them:
 #   round      llama-quantize --pure Q4_0 (no importance matrix)
-#   fit        the same tensors, quantized again by tools/mlb.py (the default rule)
+#   fit        the same tensors, quantized again by tools/mlb.py (--q4-rule fit)
+#   flat       --q4-rule flat: the fit weighted by sqrt(s2 + x^2)
+#   fit_layers fit for the layers' matrices, the embedding and classifier rounded
+#   fit_emb    fit for the embedding and classifier only
 #   lsearch    llama-quantize with an importance matrix of equal weights
-#   kunif      Krafla's rule with that matrix (weights imp * sqrt(s2 + x^2))
+#   kunif      Krafla's rule with that matrix (the same bytes as flat)
 #   limat      llama-quantize --pure --imatrix
 #   kimat      Krafla's rule with the same importance matrix
 #   q4km       Q4_K_M; q4km_imat with the importance matrix; q8 Q8_0 --pure
@@ -23,7 +26,7 @@ set -eu
 [ $# -ge 4 ] || { sed -n '2,24p' "$0"; exit 2; }
 LCPP=$1 REF=$2 TRAIN=$3 TEST=$4 OUT=${5:-build/q4}
 CHUNKS=${CHUNKS:-32}
-VARIANTS=${VARIANTS:-"round fit lsearch kunif limat kimat q4km q4km_imat q8"}
+VARIANTS=${VARIANTS:-"round fit flat lsearch limat kimat q4km q4km_imat q8"}
 B=$LCPP/build-native/bin
 PATCH="python3 $(dirname "$0")/q4_patch_gguf.py"
 export GGUF_PY=$LCPP/gguf-py
@@ -65,6 +68,9 @@ for v in $VARIANTS; do
     case $v in
         round)     cp "$OUT/round.gguf" "$V" ;;
         fit)       cp "$OUT/round.gguf" "$V"; $PATCH "$REF" "$V" ;;
+        flat)      cp "$OUT/round.gguf" "$V"; $PATCH "$REF" "$V" --rule flat ;;
+        fit_layers) cp "$OUT/round.gguf" "$V"; $PATCH "$REF" "$V" --tensors '^blk\.' ;;
+        fit_emb)   cp "$OUT/round.gguf" "$V"; $PATCH "$REF" "$V" --tensors '^(token_embd|output)\.' ;;
         kunif)     cp "$OUT/round.gguf" "$V"; $PATCH "$REF" "$V" --imatrix "$OUT/uniform.gguf" ;;
         kimat)     cp "$OUT/round.gguf" "$V"; $PATCH "$REF" "$V" --imatrix "$OUT/imat.gguf" ;;
         lsearch)   "$B/llama-quantize" --pure --imatrix "$OUT/uniform.gguf" "$REF" "$V" Q4_0 ;;

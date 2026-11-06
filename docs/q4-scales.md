@@ -1,6 +1,6 @@
 ---
-title: "Q4_0 block scales: fitted against rounded, measured on seven models"
-description: "How Krafla's fitted Q4_0 block scales compare with llama.cpp's Q4_0 rounding and importance-matrix search: KL divergence, perplexity and top-token agreement on seven models from 360M to 1.7B, all tensors equal."
+title: "Q4_0 block scales: fitted against rounded, measured on twelve models"
+description: "How Krafla's fitted Q4_0 block scales compare with llama.cpp's Q4_0 rounding and importance-matrix search: KL divergence, perplexity and top-token agreement on twelve models from 135M to 3B, all tensors equal."
 parent: "Krafla vs llama.cpp: CPU speed and perplexity benchmarks"
 nav_order: 1
 nav_title: "Q4_0 block scales"
@@ -15,13 +15,17 @@ Krafla's choice compares with llama.cpp's on the same tensors.
 
 ## Summary
 
-- **Without an importance matrix**, Krafla's fitted scales bring the model
-  closer to the unquantized one than llama.cpp's Q4_0 on five of the seven
-  models: the KL divergence is 6–9% lower on the four Qwen models and 1% lower
-  on SmolLM2 360M. On Llama 3.2 1B it is 5% higher. Gemma 3 is quantized with
-  llama.cpp's rounding by default and gives the same bytes.
+- **Without an importance matrix**, `tools/convert.py` picks the rule by
+  architecture, and each one brings the model closer to the unquantized one
+  than llama.cpp's Q4_0:
+  - **Qwen** (four models): the fit, with KL divergence 6–9% lower.
+  - **Llama architecture** (Llama 3.2, TinyLlama and SmolLM2; seven models):
+    the fit weighted as llama.cpp weights its importance search
+    (`--q4-rule flat`). KL divergence is 1.5–5.6% lower on six of the seven,
+    and lower than the plain fit's on all seven.
+  - **Gemma 3**: llama.cpp's rounding, which gives the same bytes.
 - **With an importance matrix**, llama.cpp's own search does as well as
-  Krafla's fit or better on five of the seven models.
+  Krafla's fit or better on five of the seven models tried.
 - **Earlier figures were too large.** The comparison page gave Qwen2.5 0.5B a
   Q4_0 perplexity of 15.14 against 15.86 for llama.cpp. That came from 4
   chunks, about 1,000 scored tokens. On 32 chunks the gap narrows to 15.88
@@ -30,6 +34,13 @@ Krafla's choice compares with llama.cpp's on the same tensors.
   1.3–5 times less KL divergence than the best Q4_0 of each model (2.4–6.5
   times with an importance matrix).
 
+![Change in KL divergence against llama.cpp's Q4_0 for the fit and flat rules on twelve models: the fit is 6 to 9% lower on the four Qwen models, flat 1.5 to 5.6% lower on six of the seven Llama-architecture models, and both are higher on Gemma 3 1B](assets/q4-kld.svg)
+
+The chart shows the KL divergence tables below, without an importance matrix
+(`scripts/sync_docs.py` draws it from them). Each row is one model; the
+farther left a dot, the closer that rule brings the model to the unquantized
+one. The group labels give the rule `tools/convert.py` uses by default.
+
 ## The rules
 
 - **Rounded** (llama.cpp's `quantize_row_q4_0_ref`, used by `llama-quantize`
@@ -37,11 +48,16 @@ Krafla's choice compares with llama.cpp's on the same tensors.
   - `d` is the block's largest-magnitude weight divided by -8.
   - Each weight is rounded to the nearest level.
   - `tools/convert.py --q4-rule round` produces the same bytes.
-- **Fitted** (Krafla's default, `tools/mlb.py`):
+- **Fitted** (`--q4-rule fit`, Krafla's default except for the Llama
+  architecture and Gemma 3, `tools/mlb.py`):
   - For 13 candidates, the largest weight is mapped to level `-(8 + s)`, with
     `s` from -2.0 to 0.4 in steps of 0.2.
   - Each candidate's `d` is fitted by least squares weighted by `x²`, and the
     candidate with the least weighted error is kept.
+- **Flat** (`--q4-rule flat`, the default for `model_type` `llama`): the same
+  13 candidates, with the error weighted by `sqrt(s2 + x²)`, where `s2` is the
+  row's mean `x²`. This is llama.cpp's weighting below with every channel
+  equally important. The embedding and classifier keep the `x²` fit.
 - **llama.cpp search** (`llama-quantize --imatrix`):
   - Same idea, with 19 candidates from -7.1 to -8.9 in steps of 0.1.
   - The error is weighted by `imp * sqrt(s2 + x²)`, where `imp` is the
@@ -59,7 +75,7 @@ The goal is to compare quantization rules alone, with nothing else differing.
 - **Krafla's variants:** `scripts/q4_patch_gguf.py` rewrites each Q4_0 tensor
   of that file with `tools/mlb.py`.
 - **Check:** with `--rule round`, the rewrite gives back llama.cpp's bytes, in
-  every block of all seven models.
+  every block of all twelve models.
 - **Scoring:** every file is scored by the same program:
   - `llama-perplexity` (llama.cpp b11835) on the wikitext-2 test set.
   - 32 chunks of 512 tokens, the second half of each chunk scored (8,192
@@ -91,8 +107,9 @@ uses.
 | Qwen3 1.7B | 14.58 | 17.93 | 16.66 | 0.2243 | 0.2045 | −8.8% | 80.8% | 81.2% |
 
 - **Gemma 3** is why `tools/convert.py` rounds Gemma 3 by default.
-- **Llama 3.2 1B** is the one model measured where the fit loses with nothing
-  to offset it; `--q4-rule round` gives it llama.cpp's scales.
+- **Llama 3.2 1B** is the one model here where the fit loses with nothing to
+  offset it. Six more models of its architecture were measured
+  ([below](#llama-architecture-models)), and `flat` became their default.
 - **SmolLM2 360M:** the 1% difference is within the noise.
 
 ## With an importance matrix
@@ -127,7 +144,7 @@ does weight the classifier, so this table does not show that case.
 Two more variants separate the error weighting from the candidates:
 
 - **Fitted, llama.cpp weights:** Krafla's 13 candidates with llama.cpp's
-  weighting.
+  weighting. `--q4-rule flat` writes the same bytes.
 - **llama.cpp search:** llama.cpp's 19 candidates with the same weighting.
 
 Both were made with a matrix in which every channel has the same importance,
@@ -154,7 +171,51 @@ the classifier, so each quantizer keeps its unweighted rule there:
   - `sqrt(s2 + x²)` lowers KLD on six of the seven models, by up to 9%.
   - It raises it by 14% on Qwen3 1.7B, the model on which the `x²` fit gains
     most over rounding.
-  - The default stays `x²` until more models settle it.
+  - The Llama architecture settles it for its models (next section); the
+    others keep `x²`.
+
+## Llama architecture models
+
+Hugging Face configs with `model_type` `llama` include Llama 3.2, TinyLlama and
+SmolLM2. They share the converter's default rule, so seven of them were
+measured as above, without an importance matrix. Changes are against rounded:
+
+| Model | Reference PPL | Rounded PPL | Flat PPL | Rounded KLD | Fitted KLD | Flat KLD | Fitted change | Flat change |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| SmolLM2 135M Instruct | 16.63 | 22.91 | 21.97 | 0.3249 | 0.3139 | 0.3072 | −3.4% | −5.4% |
+| SmolLM2 360M Instruct | 12.42 | 15.20 | 15.24 | 0.2262 | 0.2241 | 0.2227 | −0.9% | −1.5% |
+| TinyLlama 1.1B Chat v1.0 | 8.59 | 8.92 | 8.88 | 0.0531 | 0.0550 | 0.0509 | +3.7% | −4.2% |
+| TinyLlama v1.1 | 9.11 | 9.64 | 9.74 | 0.0657 | 0.0720 | 0.0680 | +9.6% | +3.5% |
+| Llama 3.2 1B Instruct | 13.83 | 16.48 | 16.46 | 0.1562 | 0.1646 | 0.1501 | +5.4% | −3.9% |
+| SmolLM2 1.7B Instruct | 8.48 | 9.74 | 9.70 | 0.1674 | 0.1635 | 0.1579 | −2.3% | −5.6% |
+| Llama 3.2 3B Instruct | 10.10 | 10.77 | 10.80 | 0.0682 | 0.0674 | 0.0647 | −1.2% | −5.1% |
+
+- **Flat beats the plain fit on all seven** and rounding on six.
+- **The plain fit does not beat rounding on these models:** it is lower on
+  four and higher on three, by up to 10%.
+- **TinyLlama v1.1** is the exception. One of the 32 chunks raises both
+  fitted means: on it, the rounded file's KLD is 0.04, flat's 0.10 and the
+  fit's 0.31. Without that chunk, the fit is 3.3% below rounded and flat 0.6%
+  above.
+- **Not the embedding alone.** Two more variants fit only the layers' matrices
+  (`fit_layers`) or only the embedding and classifier (`fit_emb`):
+  - On Llama 3.2 1B and TinyLlama 1.1B Chat, fitting the layers raised KLD
+    (+7.2%, +4.7%) and fitting the embedding lowered it (−1.8%, −0.8%).
+  - On Llama 3.2 3B it was the other way round (−2.4%, +2.0%), so neither
+    explains the loss.
+- **Krafla's runtime agrees.** `tools/perplexity.py --llama-cpp` on the same
+  32 chunks, with files from `tools/convert.py`, gives these perplexities:
+  - SmolLM2 135M: 22.90 rounded, 22.19 fitted and 21.97 flat.
+  - Llama 3.2 1B: 16.42 rounded, 16.72 fitted and 16.44 flat.
+
+The other architectures keep their rules:
+
+- **Qwen:** the plain fit beat rounding on all four models. `flat` was 2–7%
+  below it on three of them, but 14% above it on Qwen3 1.7B, so Qwen keeps
+  the plain fit until more models settle it.
+- **Gemma 3 1B:** `flat` was 3% above rounded.
+
+The importance-matrix and format tables cover the first seven models only.
 
 ## Q4_0 against other formats
 
@@ -215,6 +276,11 @@ Model files were the unquantized GGUFs of each Hugging Face repository:
 | Llama 3.2 1B Instruct | `unsloth/Llama-3.2-1B-Instruct-GGUF`, BF16 |
 | Gemma 3 1B it | `unsloth/gemma-3-1b-it-GGUF`, BF16 |
 | Qwen3 1.7B | `unsloth/Qwen3-1.7B-GGUF`, BF16 |
+| SmolLM2 135M Instruct | `unsloth/SmolLM2-135M-Instruct-GGUF`, F16 |
+| TinyLlama 1.1B Chat v1.0 | `andrijdavid/TinyLlama-1.1B-Chat-v1.0-GGUF`, f16 |
+| TinyLlama v1.1 | `mradermacher/TinyLlama_v1.1-GGUF`, f16 |
+| SmolLM2 1.7B Instruct | `unsloth/SmolLM2-1.7B-Instruct-GGUF`, F16 |
+| Llama 3.2 3B Instruct | `unsloth/Llama-3.2-3B-Instruct-GGUF`, BF16 |
 
 The text was wikitext-2-raw-v1, with the training set for the importance
 matrix and the test set for scoring.
