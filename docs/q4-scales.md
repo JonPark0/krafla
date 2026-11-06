@@ -34,6 +34,13 @@ Krafla's choice compares with llama.cpp's on the same tensors.
   1.3–5 times less KL divergence than the best Q4_0 of each model (2.4–6.5
   times with an importance matrix).
 
+![Change in KL divergence against llama.cpp's Q4_0 for the fit and flat rules on twelve models: the fit is 6 to 9% lower on the four Qwen models, flat 1.5 to 5.6% lower on six of the seven Llama-architecture models, and both are higher on Gemma 3 1B](assets/q4-kld.svg)
+
+The chart shows the KL divergence tables below, without an importance matrix
+(`scripts/sync_docs.py` draws it from them). Each row is one model; the
+farther left a dot, the closer that rule brings the model to the unquantized
+one. The group labels give the rule `tools/convert.py` uses by default.
+
 ## The rules
 
 - **Rounded** (llama.cpp's `quantize_row_q4_0_ref`, used by `llama-quantize`
@@ -137,7 +144,7 @@ does weight the classifier, so this table does not show that case.
 Two more variants separate the error weighting from the candidates:
 
 - **Fitted, llama.cpp weights:** Krafla's 13 candidates with llama.cpp's
-  weighting.
+  weighting. `--q4-rule flat` writes the same bytes.
 - **llama.cpp search:** llama.cpp's 19 candidates with the same weighting.
 
 Both were made with a matrix in which every channel has the same importance,

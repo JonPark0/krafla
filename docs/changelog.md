@@ -22,6 +22,17 @@ nav_title: "Changelog"
     `tools/mlb.py` (`--rule fit|flat|round`, `--tensors REGEX` for some of
     them).
   - `scripts/compare_q4.sh` builds and scores every variant.
+- Charts in the docs, drawn by `scripts/sync_docs.py` from the pages' own
+  tables and checked in CI like the decode chart:
+  - the KL divergence of the fit and flat Q4 rules against llama.cpp's Q4_0
+    on twelve models (Q4_0 block scales);
+  - prefill speed against llama.cpp at each ISA level (Comparison with
+    llama.cpp);
+  - Llama 3.2 1B's file size against perplexity with `--q8` classes (user
+    guide).
+
+  The decode chart takes the same colors, checked for color-vision
+  deficiency and contrast in light and dark mode.
 - `tools/convert.py --q4-rule flat`: the Q4 fit with the error weighted by
   `sqrt(s2 + x²)`, as llama.cpp weights its importance search when every
   channel is equally important. The embedding and classifier keep the `x²`

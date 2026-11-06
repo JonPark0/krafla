@@ -93,6 +93,11 @@ run.
   1.07–1.16× for Q8_0 and by up to 1.17× for Q4_0. From AVX2 down, Krafla
   prefills faster (1.4–6.4×).
 
+![Krafla prefill speed relative to llama.cpp at each ISA level, one thread: below 1× with AVX-512 VNNI and for dotprod Q4_0, 1.1 to 6.4 times elsewhere](assets/prefill-ratio.svg)
+
+The chart shows the one-thread prefill ratios (Krafla's prefill speed divided
+by llama.cpp's) of this table and the [AArch64](#aarch64) one.
+
 The native llama.cpp build gets its prefill speed from AMX, not from AVX-512
 VNNI: by default it repacks its weights for AMX tiles. With repacking turned
 off (`llama-bench --repack 0`, on the same machine in a later run), it

@@ -341,12 +341,16 @@ sizes are in MiB. Decode speed is on 4 vCPUs with the avx512vnni build.
 | Q8 | 1252 MiB | 17.27 | 35.0 tok/s |
 | Q4 + Q8 `v,o,down` | 831 MiB | 17.86 | 47.7 tok/s |
 | Q4 + Q8 `v,down` | 799 MiB | 18.07 | |
+| Q4 + Q8 `emb,cls` | 788 MiB | 19.51 | |
 | Q4 | 663 MiB | 19.67 | 64.1 tok/s |
 
+![Llama 3.2 1B file size against perplexity: Q8 1252 MiB 17.27, Q4 with v,o,down in Q8 831 MiB 17.86, with v,down 799 MiB 18.07, with emb,cls 788 MiB 19.51, Q4 663 MiB 19.67](assets/q4-mixed.svg)
+
 The down projection (`down`) and the value and output projections (`v`, `o`)
-matter most. The Q8 KV cache costs nothing measurable here: `--kv q8` on the
-Q8 model gives 17.27. The embedding and classifier (`emb`, `cls`) are large
-for a 128K vocabulary and help little (Q4 + `emb,cls`: 788 MiB, 19.51).
+matter most: keeping them in Q8 recovers three quarters of the gap to Q8 for
+under a third of its extra size. The embedding and classifier (`emb`, `cls`)
+are large for a 128K vocabulary and help little. The Q8 KV cache costs nothing
+measurable here: `--kv q8` on the Q8 model gives 17.27.
 
 Qwen2.5 0.5B Instruct on the same text and machine. Qwen2.5 adds no BOS, and
 the F32 numpy reference scores 19.00:
