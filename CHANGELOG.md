@@ -68,6 +68,12 @@
   keeps llama.cpp's rounding.
 - CI checks the generated docs files after numpy is installed, as the
   figures quantize with `tools/mlb.py`.
+- The Hugging Face files of SmolLM2 135M and 360M Instruct and TinyLlama
+  1.1B Chat Q4 were converted again with `flat`. On the model cards' 4 chunks,
+  Q4 perplexity went from 31.6 to 31.3 (SmolLM2 135M), 10.6 to 10.6
+  (TinyLlama) and 21.7 to 22.1 (SmolLM2 360M). On 32 chunks the two rules
+  score the same on SmolLM2 360M (15.24 against 15.25, KL divergence 0.6%
+  lower with `flat`). Their cards and the user guide now name Krafla 0.9.1.
 - `--q4-rule round` writes `d` = -0 for a block of zeros, as llama.cpp does,
   so that its bytes equal `llama-quantize`'s in every block (TinyLlama's
   embedding has such blocks). The values are unchanged.
