@@ -333,9 +333,10 @@ classes of a Q4 model in Q8 (`emb`, `cls`, `qk`, `v`, `o`, `up`, `down`):
 ![Where each matrix class sits in a layer: the embedding (emb), the attention's Wq and Wk (qk), Wv (v) and Wo (o), the feed-forward's W1 and W3 (up) and W2 (down), and the classifier (cls); v, o and down are marked](assets/layer-flow.svg)
 
 A tied embedding (Qwen2.5 0.5B, Llama 3.2 1B, SmolLM2, Gemma 3) is also the
-classifier, so `--q8 emb` or `--q8 cls` keeps it in Q8. In Qwen3.5's
-linear-attention layers, `lqkv` and the attention gate take the class `qk`,
-`lz` takes `v` and `lout` takes `o`; their two small gates are always Q8.
+classifier, so `--q8 emb` or `--q8 cls` keeps it in Q8. In Qwen3.5, the
+attention layers' output gate takes the class `qk`; in its linear-attention
+layers `lqkv` takes `qk`, `lz` takes `v` and `lout` takes `o`, and their two
+small gates (`la`, `lb`) are always Q8.
 
 ```sh
 python3 tools/convert.py hf ./Llama-3.2-1B-Instruct llama.mlb --wtype q4 --q8 v,o,down

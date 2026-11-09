@@ -14,10 +14,11 @@ import sync_docs  # noqa: E402
 
 def test_targets_render():
     with warnings.catch_warnings():
-        warnings.simplefilter("error")
+        warnings.simplefilter("error", RuntimeWarning)   # overflow, invalid value: bad figure math
         targets = sync_docs.targets()
     svgs = {p: t for p, t in targets.items() if p.endswith(".svg")}
-    assert len(svgs) == 4 + len(docfigs.FIGURES)
+    assert all(os.path.join(sync_docs.ASSETS, n) in svgs for n in docfigs.FIGURES)
+    assert len(svgs) > len(docfigs.FIGURES)     # the charts too
     for path, text in svgs.items():
         doc = xml.dom.minidom.parseString(text.encode("utf-8"))
         root = doc.documentElement

@@ -3,11 +3,14 @@ concepts the pages explain. scripts/sync_docs.py writes them to docs/assets/
 and checks in CI that they are current.
 
 Every figure is drawn from data, not by hand: the Q4 rule figure quantizes its
-block with tools/mlb.py, and the others take their facts from the code
-(mlb.Q8_CLASSES, the release wrappers' ISA order) as noted where they do.
+block with tools/mlb.py, and the others take their facts from the code (the
+matrix classes, the release wrappers' ISA order) as noted where they do. They
+use mlb's private names (_CLASS_OF, _q4_round, _q4_search, _sum32);
+tests/test_docs.py pins the scale figure to mlb's own choice.
 """
 import math
 import os
+import re
 import sys
 
 import numpy as np
@@ -390,8 +393,8 @@ def layer_flow():
     out.append(text(XL + 160, ye + 18, "a row lookup: the token's row becomes the residual stream x", 11, "m"))
     out.append(line(XL + 16, ye + 28, XL + 16, 148, "ln", 1.5, True))
     residual_row(150, "Attention", [
-        ("op", 64, "RMSNorm"), ("op", 58, "quantize"), ("pair", 100, (["wq", "wk"], ["wv"])),
-        ("op", 44, "RoPE"), ("op", 124, "attention · KV cache"), ("op", 58, "quantize"), ("mat", 70, ["wo"])])
+        ("op", 64, "RMSNorm"), ("op", 58, "quantize"), ("pair", 94, (["wq", "wk"], ["wv"])),
+        ("op", 70, "RoPE (q, k)"), ("op", 114, "attention · KV cache"), ("op", 58, "quantize"), ("mat", 70, ["wo"])])
     turn(150, 272, XL + 16)
     residual_row(272, "Feed-forward", [
         ("op", 64, "RMSNorm"), ("op", 58, "quantize"), ("pair", 100, (["w1"], ["w3"])),
@@ -436,7 +439,6 @@ ARM = [("neon_i8mm", "asimddp i8mm", "Cortex-A510/A710/X2 and later, Neoverse N2
 
 def wrapper_order():
     """The ISA lists scripts/package_release.sh gives the Linux wrappers."""
-    import re
     with open(os.path.join(ROOT, "scripts", "package_release.sh"), encoding="utf-8") as f:
         s = f.read()
     x86 = re.search(r'^linux linux-x86_64 "" "([^"]+)"', s, re.M).group(1).split()
@@ -447,8 +449,8 @@ def wrapper_order():
 def isa_ladder():
     x86_order, arm_order = wrapper_order()
     if [r[0] for r in X86] != x86_order or [r[0] for r in ARM] != arm_order:
-        sys.exit(f"docfigs.py: the ISA ladder does not follow scripts/package_release.sh "
-                 f"({x86_order}, {arm_order})")
+        raise RuntimeError(f"docfigs.py: the ISA ladder does not follow scripts/package_release.sh "
+                           f"({x86_order}, {arm_order})")
     W, H = 760, 566
     out = svg_head("isa", W, H, "Which build runs: from the fastest down",
                    "The release's ml_run, ml_server, ml_bench and ml_tok start the first build the CPU supports",
