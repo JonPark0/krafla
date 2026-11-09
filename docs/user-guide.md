@@ -139,12 +139,12 @@ installing Python. They are also gathered, smallest first, in the
 
 | Model | Q4_0 | Q8_0 | Perplexity Q4_0 / Q8_0 | `--chat` | Krafla |
 |-------|-----:|-----:|---------------------:|----------|--------|
-| [SmolLM2 135M Instruct](https://huggingface.co/jonpark0/SmolLM2-135M-Instruct-krafla) | 72 MiB | 136 MiB | 31.6 / 23.5 | `smollm` | 0.8.0 |
-| [SmolLM2 360M Instruct](https://huggingface.co/jonpark0/SmolLM2-360M-Instruct-krafla) | 194 MiB | 367 MiB | 21.7 / 17.5 | `smollm` | 0.8.0 |
+| [SmolLM2 135M Instruct](https://huggingface.co/jonpark0/SmolLM2-135M-Instruct-krafla) | 72 MiB | 136 MiB | 31.3 / 23.5 | `smollm` | 0.9.1 |
+| [SmolLM2 360M Instruct](https://huggingface.co/jonpark0/SmolLM2-360M-Instruct-krafla) | 194 MiB | 367 MiB | 22.1 / 17.5 | `smollm` | 0.9.1 |
 | [Qwen2.5 0.5B Instruct](https://huggingface.co/jonpark0/Qwen2.5-0.5B-Instruct-krafla) | 265 MiB | 501 MiB | 21.7 / 19.0 | `qwen` | 0.8.0 |
 | [Qwen3 0.6B](https://huggingface.co/jonpark0/Qwen3-0.6B-krafla) | 320 MiB | 604 MiB | 31.7 / 27.9 | `chatml` | 0.8.0 |
 | [Qwen3.5 0.8B](https://huggingface.co/jonpark0/Qwen3.5-0.8B-krafla) | 406 MiB | 764 MiB | 27.5 / 23.9 | `qwen3.5-nothink` | 0.9.0 |
-| [TinyLlama 1.1B Chat](https://huggingface.co/jonpark0/TinyLlama-1.1B-Chat-v1.0-krafla) | 590 MiB | 1115 MiB | 10.6 / 10.3 | `zephyr` | 0.8.0 |
+| [TinyLlama 1.1B Chat](https://huggingface.co/jonpark0/TinyLlama-1.1B-Chat-v1.0-krafla) | 590 MiB | 1115 MiB | 10.6 / 10.3 | `zephyr` | 0.9.1 |
 | [Qwen2.5 1.5B Instruct](https://huggingface.co/jonpark0/Qwen2.5-1.5B-Instruct-krafla) | 829 MiB | 1565 MiB | 14.7 / 12.7 | `qwen` | 0.8.0 |
 | [Qwen3 1.7B](https://huggingface.co/jonpark0/Qwen3-1.7B-krafla) | 923 MiB | 1744 MiB | 24.0 / 21.0 | `chatml` | 0.8.0 |
 | [Qwen3.5 2B](https://huggingface.co/jonpark0/Qwen3.5-2B-krafla) | 1012 MiB | 1908 MiB | 18.2 / 16.5 | `qwen3.5-nothink` | 0.9.0 |
