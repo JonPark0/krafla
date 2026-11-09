@@ -182,6 +182,8 @@ Each block of 32 weights takes 16 bytes. Byte `j` of a block holds element `j`
 in its low nibble and element `j + 16` in its high nibble. Weight
 `w = (nibble - 8) × d`, which gives values in [-8, 7].
 
+![One Q4_0 block: weights 0 to 15 go to the low nibbles of bytes 0 to 15 and weights 16 to 31 to their high nibbles; with a 2-byte f16 scale per block that is 18 bytes per 32 weights, 4.5 bits per weight](assets/q4-block.svg)
+
 ### Quantization rule
 
 Both the writer and the runtime's activation quantizer use these exact float32

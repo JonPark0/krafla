@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 566" width="760" height="566" role="img" aria-labelledby="isa-title isa-desc" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<title id="isa-title">Which build runs: from the fastest down</title>
+<desc id="isa-desc">x86-64, fastest first: avx512vnni (avx512_vnni), avxvnni (avx_vnni), avx2 (avx2), sse41 (sse4_1), sse2 (sse2). AArch64: neon_i8mm (asimddp i8mm), sve (asimddp sve), neon_dotprod (asimddp), neon (asimd). A build on a CPU without its features exits with code 3 and names the missing one.</desc>
+<style>
+.bg{fill:#fff;stroke:#e5e7eb}.t{fill:#1f2937}.m{fill:#6b7280}.g{stroke:#eceef1}.ax{stroke:#9ca3af}.s1{fill:#2a78d6}.s2{fill:#eb6834}.s3{fill:#1baf7a}.s4{fill:#eda100}.k1{stroke:#2a78d6}.k2{stroke:#eb6834}.k3{stroke:#1baf7a}.k4{stroke:#eda100}.sx{fill:#9ca3af}.k0{stroke:#c9ccd1}.f1{fill:#e4eefb}.f2{fill:#fde9e0}.f3{fill:#dcf4ea}.f4{fill:#fdf1d6}.f0{fill:#f3f4f6}.lb{fill:#fff}.ring{stroke:#fff}.cn{stroke:#c9ccd1}.ln{stroke:#9ca3af;fill:none}.box{fill:#fff;stroke:#c9ccd1}.on{fill:#fff}.ondk{fill:#1f2937}.ah{fill:#9ca3af}.h{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}.r0{fill:#184f95}.r1{fill:#256abf}.r2{fill:#3987e5}.r3{fill:#6da7ec}.r4{fill:#9ec5f4}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+@media (prefers-color-scheme:dark){.bg{fill:#1f2023;stroke:#3a3b40}.t{fill:#e5e7eb}.m{fill:#9ca3af}.g{stroke:#2e3035}.ax{stroke:#6b7280}.s1{fill:#3987e5}.s2{fill:#d95926}.sx{fill:#6b7280}.k0{stroke:#4b4f57}.s3{fill:#199e70}.s4{fill:#c98500}.k1{stroke:#3987e5}.k2{stroke:#d95926}.k3{stroke:#199e70}.k4{stroke:#c98500}.f1{fill:#1d2d45}.f2{fill:#3b2519}.f3{fill:#16362b}.f4{fill:#382d12}.f0{fill:#2a2c31}.lb{fill:#1f2023}.ring{stroke:#1f2023}.cn{stroke:#4b4f57}.ln{stroke:#6b7280}.box{fill:#1f2023;stroke:#4b4f57}.ah{fill:#6b7280}.h{stroke:#1f2023}.r0{fill:#b7d3f6}.r1{fill:#86b6ef}.r2{fill:#5598e7}.r3{fill:#2a78d6}.r4{fill:#1c5cab}}
+</style>
+<defs><marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0L8,4L0,8z"/></marker></defs>
+<rect class="bg" x="0.5" y="0.5" width="759" height="565" rx="8"/>
+<text class="t" x="20" y="32" font-size="17" font-weight="600">Which build runs: from the fastest down</text>
+<text class="m" x="20" y="54" font-size="13">The release's ml_run, ml_server, ml_bench and ml_tok start the first build the CPU supports</text>
+<text class="t" x="20.0" y="92.0" font-size="14" font-weight="600">x86-64 (Linux and Windows archives)</text>
+<text class="m" x="20.0" y="108.0" font-size="11">right: the /proc/cpuinfo flags it needs; below: CPUs that stop here</text>
+<rect class="box" x="20.0" y="122.0" width="340.0" height="58.0" rx="6" stroke-width="1"/>
+<rect class="r0" x="20.0" y="122.0" width="6.0" height="58.0" rx="3"/>
+<text class="t mono" x="36.0" y="144.0" font-size="14" font-weight="600">avx512vnni</text>
+<text class="m mono" x="350.0" y="144.0" font-size="11" text-anchor="end">avx512_vnni</text>
+<text class="m" x="36.0" y="161.0" font-size="11">Intel Ice Lake, Tiger Lake, Cascade Lake and later Xeons;</text>
+<text class="m" x="36.0" y="174.0" font-size="11">AMD Zen 4 and later</text>
+<line class="ln" x1="60.0" y1="181.0" x2="60.0" y2="196.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<text class="m" x="68.0" y="193.0" font-size="10">not supported</text>
+<rect class="box" x="20.0" y="198.0" width="340.0" height="58.0" rx="6" stroke-width="1"/>
+<rect class="r1" x="20.0" y="198.0" width="6.0" height="58.0" rx="3"/>
+<text class="t mono" x="36.0" y="220.0" font-size="14" font-weight="600">avxvnni</text>
+<text class="m mono" x="350.0" y="220.0" font-size="11" text-anchor="end">avx_vnni</text>
+<text class="m" x="36.0" y="237.0" font-size="11">Intel Alder Lake and later client CPUs without AVX-512</text>
+<line class="ln" x1="60.0" y1="257.0" x2="60.0" y2="272.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<text class="m" x="68.0" y="269.0" font-size="10">not supported</text>
+<rect class="box" x="20.0" y="274.0" width="340.0" height="58.0" rx="6" stroke-width="1"/>
+<rect class="r2" x="20.0" y="274.0" width="6.0" height="58.0" rx="3"/>
+<text class="t mono" x="36.0" y="296.0" font-size="14" font-weight="600">avx2</text>
+<text class="m mono" x="350.0" y="296.0" font-size="11" text-anchor="end">avx2</text>
+<text class="m" x="36.0" y="313.0" font-size="11">Intel Haswell to Comet Lake, Skylake-SP; AMD Zen 1 to 3,</text>
+<text class="m" x="36.0" y="326.0" font-size="11">Excavator</text>
+<line class="ln" x1="60.0" y1="333.0" x2="60.0" y2="348.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<text class="m" x="68.0" y="345.0" font-size="10">not supported</text>
+<rect class="box" x="20.0" y="350.0" width="340.0" height="58.0" rx="6" stroke-width="1"/>
+<rect class="r3" x="20.0" y="350.0" width="6.0" height="58.0" rx="3"/>
+<text class="t mono" x="36.0" y="372.0" font-size="14" font-weight="600">sse41</text>
+<text class="m mono" x="350.0" y="372.0" font-size="11" text-anchor="end">sse4_1</text>
+<text class="m" x="36.0" y="389.0" font-size="11">Intel Penryn to Ivy Bridge; AMD Bulldozer to Steamroller</text>
+<line class="ln" x1="60.0" y1="409.0" x2="60.0" y2="424.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<text class="m" x="68.0" y="421.0" font-size="10">not supported</text>
+<rect class="box" x="20.0" y="426.0" width="340.0" height="58.0" rx="6" stroke-width="1"/>
+<rect class="r4" x="20.0" y="426.0" width="6.0" height="58.0" rx="3"/>
+<text class="t mono" x="36.0" y="448.0" font-size="14" font-weight="600">sse2</text>
+<text class="m mono" x="350.0" y="448.0" font-size="11" text-anchor="end">sse2</text>
+<text class="m" x="36.0" y="465.0" font-size="11">older x86-64: Core 2 before Penryn, Athlon 64, Phenom</text>
+<text class="t" x="400.0" y="92.0" font-size="14" font-weight="600">AArch64 (linux-aarch64 archive)</text>
+<text class="m" x="400.0" y="108.0" font-size="11">right: the /proc/cpuinfo flags it needs; below: CPUs that stop here</text>
+<rect class="box" x="400.0" y="122.0" width="340.0" height="58.0" rx="6" stroke-width="1"/>
+<rect class="r0" x="400.0" y="122.0" width="6.0" height="58.0" rx="3"/>
+<text class="t mono" x="416.0" y="144.0" font-size="14" font-weight="600">neon_i8mm</text>
+<text class="m mono" x="730.0" y="144.0" font-size="11" text-anchor="end">asimddp i8mm</text>
+<text class="m" x="416.0" y="161.0" font-size="11">Cortex-A510/A710/X2 and later, Neoverse N2/V1/V2,</text>
+<text class="m" x="416.0" y="174.0" font-size="11">Apple M2 and later, Graviton 3 and later</text>
+<line class="ln" x1="440.0" y1="181.0" x2="440.0" y2="196.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<text class="m" x="448.0" y="193.0" font-size="10">not supported</text>
+<rect class="box" x="400.0" y="198.0" width="340.0" height="58.0" rx="6" stroke-width="1"/>
+<rect class="r1" x="400.0" y="198.0" width="6.0" height="58.0" rx="3"/>
+<text class="t mono" x="416.0" y="220.0" font-size="14" font-weight="600">sve</text>
+<text class="m mono" x="730.0" y="220.0" font-size="11" text-anchor="end">asimddp sve</text>
+<text class="m" x="416.0" y="237.0" font-size="11">SVE and dotprod without i8mm (rare: SVE CPUs with</text>
+<text class="m" x="416.0" y="250.0" font-size="11">i8mm take neon_i8mm); packed kernels from neon_dotprod</text>
+<line class="ln" x1="440.0" y1="257.0" x2="440.0" y2="272.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<text class="m" x="448.0" y="269.0" font-size="10">not supported</text>
+<rect class="box" x="400.0" y="274.0" width="340.0" height="58.0" rx="6" stroke-width="1"/>
+<rect class="r2" x="400.0" y="274.0" width="6.0" height="58.0" rx="3"/>
+<text class="t mono" x="416.0" y="296.0" font-size="14" font-weight="600">neon_dotprod</text>
+<text class="m mono" x="730.0" y="296.0" font-size="11" text-anchor="end">asimddp</text>
+<text class="m" x="416.0" y="313.0" font-size="11">Cortex-A55/A76/A78, Neoverse N1 (Graviton 2), Apple M1,</text>
+<text class="m" x="416.0" y="326.0" font-size="11">Raspberry Pi 5</text>
+<line class="ln" x1="440.0" y1="333.0" x2="440.0" y2="348.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<text class="m" x="448.0" y="345.0" font-size="10">not supported</text>
+<rect class="box" x="400.0" y="350.0" width="340.0" height="58.0" rx="6" stroke-width="1"/>
+<rect class="r3" x="400.0" y="350.0" width="6.0" height="58.0" rx="3"/>
+<text class="t mono" x="416.0" y="372.0" font-size="14" font-weight="600">neon</text>
+<text class="m mono" x="730.0" y="372.0" font-size="11" text-anchor="end">asimd</text>
+<text class="m" x="416.0" y="389.0" font-size="11">Cortex-A53/A72 (Raspberry Pi 3, 4), A64FX (no dotprod);</text>
+<text class="m" x="416.0" y="402.0" font-size="11">ARMv7 NEON boards: the armv7hf archive, neon then scalar</text>
+<text class="m" x="20.0" y="536.0" font-size="11">KRAFLA_ISA=avx2 (for example) picks a build by hand. Started on a CPU without its features, a build exits with code 3</text>
+<text class="m" x="20.0" y="551.0" font-size="11">and names the missing one instead of crashing. Building from source: make ISA=… with any of these, or scalar.</text>
+</svg>

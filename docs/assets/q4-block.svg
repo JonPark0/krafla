@@ -1,0 +1,204 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 396" width="760" height="396" role="img" aria-labelledby="q4b-title q4b-desc" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<title id="q4b-title">One Q4_0 block: 32 weights in 18 bytes</title>
+<desc id="q4b-desc">A block of 32 weights of one row. Weights 0 to 15 go to the low nibbles of bytes 0 to 15, weights 16 to 31 to their high nibbles. One f16 scale d per block. Each weight is d times (nibble minus 8). 16 bytes plus a 2-byte scale per 32 weights is 4.5 bits per weight.</desc>
+<style>
+.bg{fill:#fff;stroke:#e5e7eb}.t{fill:#1f2937}.m{fill:#6b7280}.g{stroke:#eceef1}.ax{stroke:#9ca3af}.s1{fill:#2a78d6}.s2{fill:#eb6834}.s3{fill:#1baf7a}.s4{fill:#eda100}.k1{stroke:#2a78d6}.k2{stroke:#eb6834}.k3{stroke:#1baf7a}.k4{stroke:#eda100}.sx{fill:#9ca3af}.k0{stroke:#c9ccd1}.f1{fill:#e4eefb}.f2{fill:#fde9e0}.f3{fill:#dcf4ea}.f4{fill:#fdf1d6}.f0{fill:#f3f4f6}.lb{fill:#fff}.ring{stroke:#fff}.cn{stroke:#c9ccd1}.ln{stroke:#9ca3af;fill:none}.box{fill:#fff;stroke:#c9ccd1}.on{fill:#fff}.ondk{fill:#1f2937}.ah{fill:#9ca3af}.h{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}.r0{fill:#184f95}.r1{fill:#256abf}.r2{fill:#3987e5}.r3{fill:#6da7ec}.r4{fill:#9ec5f4}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+@media (prefers-color-scheme:dark){.bg{fill:#1f2023;stroke:#3a3b40}.t{fill:#e5e7eb}.m{fill:#9ca3af}.g{stroke:#2e3035}.ax{stroke:#6b7280}.s1{fill:#3987e5}.s2{fill:#d95926}.sx{fill:#6b7280}.k0{stroke:#4b4f57}.s3{fill:#199e70}.s4{fill:#c98500}.k1{stroke:#3987e5}.k2{stroke:#d95926}.k3{stroke:#199e70}.k4{stroke:#c98500}.f1{fill:#1d2d45}.f2{fill:#3b2519}.f3{fill:#16362b}.f4{fill:#382d12}.f0{fill:#2a2c31}.lb{fill:#1f2023}.ring{stroke:#1f2023}.cn{stroke:#4b4f57}.ln{stroke:#6b7280}.box{fill:#1f2023;stroke:#4b4f57}.ah{fill:#6b7280}.h{stroke:#1f2023}.r0{fill:#b7d3f6}.r1{fill:#86b6ef}.r2{fill:#5598e7}.r3{fill:#2a78d6}.r4{fill:#1c5cab}}
+</style>
+<defs><marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0L8,4L0,8z"/></marker></defs>
+<rect class="bg" x="0.5" y="0.5" width="759" height="395" rx="8"/>
+<text class="t" x="20" y="32" font-size="17" font-weight="600">One Q4_0 block: 32 weights in 18 bytes</text>
+<text class="m" x="20" y="54" font-size="13">Byte j holds weight j in its low nibble and weight j + 16 in its high nibble</text>
+<rect class="f2 k2" x="515.6" y="68" width="12" height="12" rx="3"/>
+<text class="t" x="532.6" y="79" font-size="13">weights 16–31 · high nibble</text>
+<rect class="f1 k1" x="305.6" y="68" width="12" height="12" rx="3"/>
+<text class="t" x="322.6" y="79" font-size="13">weights 0–15 · low nibble</text>
+<text class="m" x="56.0" y="98.0" font-size="12">32 consecutive weights of one row</text>
+<rect class="f1 k1" x="57.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="66.0" y="124.0" font-size="11" text-anchor="middle">0</text>
+<rect class="f1 k1" x="77.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="86.0" y="124.0" font-size="11" text-anchor="middle">1</text>
+<rect class="f1 k1" x="97.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="106.0" y="124.0" font-size="11" text-anchor="middle">2</text>
+<rect class="f1 k1" x="117.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="126.0" y="124.0" font-size="11" text-anchor="middle">3</text>
+<rect class="f1 k1" x="137.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="146.0" y="124.0" font-size="11" text-anchor="middle">4</text>
+<rect class="f1 k1" x="157.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="166.0" y="124.0" font-size="11" text-anchor="middle">5</text>
+<rect class="f1 k1" x="177.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="186.0" y="124.0" font-size="11" text-anchor="middle">6</text>
+<rect class="f1 k1" x="197.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="206.0" y="124.0" font-size="11" text-anchor="middle">7</text>
+<rect class="f1 k1" x="217.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="226.0" y="124.0" font-size="11" text-anchor="middle">8</text>
+<rect class="f1 k1" x="237.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="246.0" y="124.0" font-size="11" text-anchor="middle">9</text>
+<rect class="f1 k1" x="257.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="266.0" y="124.0" font-size="11" text-anchor="middle">10</text>
+<rect class="f1 k1" x="277.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="286.0" y="124.0" font-size="11" text-anchor="middle">11</text>
+<rect class="f1 k1" x="297.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="306.0" y="124.0" font-size="11" text-anchor="middle">12</text>
+<rect class="f1 k1" x="317.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="326.0" y="124.0" font-size="11" text-anchor="middle">13</text>
+<rect class="f1 k1" x="337.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="346.0" y="124.0" font-size="11" text-anchor="middle">14</text>
+<rect class="f1 k1" x="357.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="366.0" y="124.0" font-size="11" text-anchor="middle">15</text>
+<rect class="f2 k2" x="377.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="386.0" y="124.0" font-size="11" text-anchor="middle">16</text>
+<rect class="f2 k2" x="397.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="406.0" y="124.0" font-size="11" text-anchor="middle">17</text>
+<rect class="f2 k2" x="417.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="426.0" y="124.0" font-size="11" text-anchor="middle">18</text>
+<rect class="f2 k2" x="437.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="446.0" y="124.0" font-size="11" text-anchor="middle">19</text>
+<rect class="f2 k2" x="457.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="466.0" y="124.0" font-size="11" text-anchor="middle">20</text>
+<rect class="f2 k2" x="477.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="486.0" y="124.0" font-size="11" text-anchor="middle">21</text>
+<rect class="f2 k2" x="497.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="506.0" y="124.0" font-size="11" text-anchor="middle">22</text>
+<rect class="f2 k2" x="517.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="526.0" y="124.0" font-size="11" text-anchor="middle">23</text>
+<rect class="f2 k2" x="537.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="546.0" y="124.0" font-size="11" text-anchor="middle">24</text>
+<rect class="f2 k2" x="557.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="566.0" y="124.0" font-size="11" text-anchor="middle">25</text>
+<rect class="f2 k2" x="577.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="586.0" y="124.0" font-size="11" text-anchor="middle">26</text>
+<rect class="f2 k2" x="597.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="606.0" y="124.0" font-size="11" text-anchor="middle">27</text>
+<rect class="f2 k2" x="617.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="626.0" y="124.0" font-size="11" text-anchor="middle">28</text>
+<rect class="f2 k2" x="637.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="646.0" y="124.0" font-size="11" text-anchor="middle">29</text>
+<rect class="f2 k2" x="657.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="666.0" y="124.0" font-size="11" text-anchor="middle">30</text>
+<rect class="f2 k2" x="677.0" y="108.0" width="18.0" height="24.0" rx="3"/>
+<text class="t" x="686.0" y="124.0" font-size="11" text-anchor="middle">31</text>
+<line class="k1" x1="66.0" y1="132.0" x2="86.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k1" x1="86.0" y1="132.0" x2="126.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k1" x1="106.0" y1="132.0" x2="166.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k1" x1="126.0" y1="132.0" x2="206.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k1" x1="146.0" y1="132.0" x2="246.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k1" x1="166.0" y1="132.0" x2="286.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k1" x1="186.0" y1="132.0" x2="326.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k1" x1="206.0" y1="132.0" x2="366.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k1" x1="226.0" y1="132.0" x2="406.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k1" x1="246.0" y1="132.0" x2="446.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k1" x1="266.0" y1="132.0" x2="486.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k1" x1="286.0" y1="132.0" x2="526.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k1" x1="306.0" y1="132.0" x2="566.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k1" x1="326.0" y1="132.0" x2="606.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k1" x1="346.0" y1="132.0" x2="646.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k1" x1="366.0" y1="132.0" x2="686.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k2" x1="386.0" y1="132.0" x2="66.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k2" x1="406.0" y1="132.0" x2="106.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k2" x1="426.0" y1="132.0" x2="146.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k2" x1="446.0" y1="132.0" x2="186.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k2" x1="466.0" y1="132.0" x2="226.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k2" x1="486.0" y1="132.0" x2="266.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k2" x1="506.0" y1="132.0" x2="306.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k2" x1="526.0" y1="132.0" x2="346.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k2" x1="546.0" y1="132.0" x2="386.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k2" x1="566.0" y1="132.0" x2="426.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k2" x1="586.0" y1="132.0" x2="466.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k2" x1="606.0" y1="132.0" x2="506.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k2" x1="626.0" y1="132.0" x2="546.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k2" x1="646.0" y1="132.0" x2="586.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k2" x1="666.0" y1="132.0" x2="626.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<line class="k2" x1="686.0" y1="132.0" x2="666.0" y2="222.0" stroke-width="1" opacity="0.55"/>
+<rect class="f2 k2" x="57.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<rect class="f1 k1" x="76.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<text class="t" x="66.5" y="241.0" font-size="11" text-anchor="middle">16</text>
+<text class="t" x="86.0" y="241.0" font-size="11" text-anchor="middle">0</text>
+<text class="m" x="76.0" y="266.0" font-size="10" text-anchor="middle">byte 0</text>
+<rect class="f2 k2" x="97.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<rect class="f1 k1" x="116.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<text class="t" x="106.5" y="241.0" font-size="11" text-anchor="middle">17</text>
+<text class="t" x="126.0" y="241.0" font-size="11" text-anchor="middle">1</text>
+<text class="m" x="116.0" y="266.0" font-size="10" text-anchor="middle">1</text>
+<rect class="f2 k2" x="137.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<rect class="f1 k1" x="156.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<text class="t" x="146.5" y="241.0" font-size="11" text-anchor="middle">18</text>
+<text class="t" x="166.0" y="241.0" font-size="11" text-anchor="middle">2</text>
+<text class="m" x="156.0" y="266.0" font-size="10" text-anchor="middle">2</text>
+<rect class="f2 k2" x="177.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<rect class="f1 k1" x="196.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<text class="t" x="186.5" y="241.0" font-size="11" text-anchor="middle">19</text>
+<text class="t" x="206.0" y="241.0" font-size="11" text-anchor="middle">3</text>
+<text class="m" x="196.0" y="266.0" font-size="10" text-anchor="middle">3</text>
+<rect class="f2 k2" x="217.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<rect class="f1 k1" x="236.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<text class="t" x="226.5" y="241.0" font-size="11" text-anchor="middle">20</text>
+<text class="t" x="246.0" y="241.0" font-size="11" text-anchor="middle">4</text>
+<text class="m" x="236.0" y="266.0" font-size="10" text-anchor="middle">4</text>
+<rect class="f2 k2" x="257.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<rect class="f1 k1" x="276.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<text class="t" x="266.5" y="241.0" font-size="11" text-anchor="middle">21</text>
+<text class="t" x="286.0" y="241.0" font-size="11" text-anchor="middle">5</text>
+<text class="m" x="276.0" y="266.0" font-size="10" text-anchor="middle">5</text>
+<rect class="f2 k2" x="297.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<rect class="f1 k1" x="316.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<text class="t" x="306.5" y="241.0" font-size="11" text-anchor="middle">22</text>
+<text class="t" x="326.0" y="241.0" font-size="11" text-anchor="middle">6</text>
+<text class="m" x="316.0" y="266.0" font-size="10" text-anchor="middle">6</text>
+<rect class="f2 k2" x="337.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<rect class="f1 k1" x="356.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<text class="t" x="346.5" y="241.0" font-size="11" text-anchor="middle">23</text>
+<text class="t" x="366.0" y="241.0" font-size="11" text-anchor="middle">7</text>
+<text class="m" x="356.0" y="266.0" font-size="10" text-anchor="middle">7</text>
+<rect class="f2 k2" x="377.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<rect class="f1 k1" x="396.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<text class="t" x="386.5" y="241.0" font-size="11" text-anchor="middle">24</text>
+<text class="t" x="406.0" y="241.0" font-size="11" text-anchor="middle">8</text>
+<text class="m" x="396.0" y="266.0" font-size="10" text-anchor="middle">8</text>
+<rect class="f2 k2" x="417.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<rect class="f1 k1" x="436.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<text class="t" x="426.5" y="241.0" font-size="11" text-anchor="middle">25</text>
+<text class="t" x="446.0" y="241.0" font-size="11" text-anchor="middle">9</text>
+<text class="m" x="436.0" y="266.0" font-size="10" text-anchor="middle">9</text>
+<rect class="f2 k2" x="457.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<rect class="f1 k1" x="476.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<text class="t" x="466.5" y="241.0" font-size="11" text-anchor="middle">26</text>
+<text class="t" x="486.0" y="241.0" font-size="11" text-anchor="middle">10</text>
+<text class="m" x="476.0" y="266.0" font-size="10" text-anchor="middle">10</text>
+<rect class="f2 k2" x="497.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<rect class="f1 k1" x="516.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<text class="t" x="506.5" y="241.0" font-size="11" text-anchor="middle">27</text>
+<text class="t" x="526.0" y="241.0" font-size="11" text-anchor="middle">11</text>
+<text class="m" x="516.0" y="266.0" font-size="10" text-anchor="middle">11</text>
+<rect class="f2 k2" x="537.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<rect class="f1 k1" x="556.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<text class="t" x="546.5" y="241.0" font-size="11" text-anchor="middle">28</text>
+<text class="t" x="566.0" y="241.0" font-size="11" text-anchor="middle">12</text>
+<text class="m" x="556.0" y="266.0" font-size="10" text-anchor="middle">12</text>
+<rect class="f2 k2" x="577.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<rect class="f1 k1" x="596.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<text class="t" x="586.5" y="241.0" font-size="11" text-anchor="middle">29</text>
+<text class="t" x="606.0" y="241.0" font-size="11" text-anchor="middle">13</text>
+<text class="m" x="596.0" y="266.0" font-size="10" text-anchor="middle">13</text>
+<rect class="f2 k2" x="617.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<rect class="f1 k1" x="636.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<text class="t" x="626.5" y="241.0" font-size="11" text-anchor="middle">30</text>
+<text class="t" x="646.0" y="241.0" font-size="11" text-anchor="middle">14</text>
+<text class="m" x="636.0" y="266.0" font-size="10" text-anchor="middle">14</text>
+<rect class="f2 k2" x="657.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<rect class="f1 k1" x="676.0" y="222.0" width="19.0" height="30.0" rx="0"/>
+<text class="t" x="666.5" y="241.0" font-size="11" text-anchor="middle">31</text>
+<text class="t" x="686.0" y="241.0" font-size="11" text-anchor="middle">15</text>
+<text class="m" x="676.0" y="266.0" font-size="10" text-anchor="middle">byte 15</text>
+<text class="m" x="66.0" y="280.0" font-size="10" text-anchor="middle">high</text>
+<text class="m" x="86.0" y="280.0" font-size="10" text-anchor="middle">low</text>
+<text class="m" x="704.0" y="235.0" font-size="11">q array:</text>
+<text class="m" x="704.0" y="249.0" font-size="11">16 bytes</text>
+<rect class="f0 cn" x="56.0" y="316.0" width="76.0" height="30.0" rx="4" stroke-width="1"/>
+<text class="t" x="94.0" y="336.0" font-size="12" text-anchor="middle" font-weight="600">d (f16)</text>
+<text class="m" x="144.0" y="329.0" font-size="11">d array: one scale per block,</text>
+<text class="m" x="144.0" y="343.0" font-size="11">2 bytes (4 with --scales f32)</text>
+<text class="t" x="366.0" y="329.0" font-size="13" font-weight="600">weight = d × (nibble − 8)</text>
+<text class="m" x="366.0" y="346.0" font-size="12">nibble 0…15 → −8…7</text>
+<text class="m" x="20.0" y="380.0" font-size="11">16 + 2 bytes per 32 weights: 4.5 bits per weight (Q8_0: 32 + 2 bytes, 8.5 bits). An .mlb matrix stores all its q bytes, then all its scales.</text>
+</svg>

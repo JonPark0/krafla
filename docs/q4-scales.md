@@ -16,8 +16,9 @@ Krafla's choice compares with llama.cpp's on the same tensors.
 ## Summary
 
 - **Without an importance matrix**, `tools/convert.py` picks the rule by
-  architecture, and each one brings the model closer to the unquantized one
-  than llama.cpp's Q4_0:
+  architecture. On ten of the twelve models its default brings the model
+  closer to the unquantized one than llama.cpp's Q4_0; on Gemma 3 it writes
+  the same bytes, and on TinyLlama v1.1 it is 3.5% further:
   - **Qwen** (four models): the fit, with KL divergence 6–9% lower.
   - **Llama architecture** (Llama 3.2, TinyLlama and SmolLM2; seven models):
     the fit weighted as llama.cpp weights its importance search
@@ -65,6 +66,13 @@ one. The group labels give the rule `tools/convert.py` uses by default.
 - **Krafla with an importance matrix** (`convert.py --imatrix`) uses that
   weighting with its own 13 candidates.
 
+![The x²-weighted error of one block of 32 Gaussian weights at each scale d: rounding's d gives 0.270, the best of the fit's 13 candidates 0.233, 14% lower](assets/q4-rules.svg)
+
+The figure quantizes one block both ways with `tools/mlb.py`. Of 10,000 random
+blocks, it is the one at the median gain, so it shows a typical block, not a
+favorable one. The error jumps wherever a weight moves to the next level, so
+the lowest error is rarely the scale that rounding picks.
+
 ## Method
 
 The goal is to compare quantization rules alone, with nothing else differing.
@@ -78,7 +86,7 @@ The goal is to compare quantization rules alone, with nothing else differing.
   every block of all twelve models.
 - **Scoring:** every file is scored by the same program:
   - `llama-perplexity` (llama.cpp b11835) on the wikitext-2 test set.
-  - 32 chunks of 512 tokens, the second half of each chunk scored (8,192
+  - 32 chunks of 512 tokens, the second half of each chunk scored (8,160
     tokens).
   - Measures: perplexity, mean KL divergence from the unquantized model's
     next-token distribution (KLD), and how often both pick the same top token.
@@ -92,9 +100,9 @@ models). The KLD standard errors are 1–3% of each value.
 
 ## Without an importance matrix
 
-This compares the two default rules: the one `llama-quantize` uses for Q4_0
-without an importance matrix, and the one `tools/convert.py --wtype q4`
-uses.
+This compares the rule `llama-quantize` uses for Q4_0 without an importance
+matrix with Krafla's `x²` fit (`--q4-rule fit`, the converter's default for
+Qwen).
 
 | Model | Reference PPL | Rounded PPL | Fitted PPL | Rounded KLD | Fitted KLD | KLD change | Rounded top 1 | Fitted top 1 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -144,7 +152,7 @@ does weight the classifier, so this table does not show that case.
 Two more variants separate the error weighting from the candidates:
 
 - **Fitted, llama.cpp weights:** Krafla's 13 candidates with llama.cpp's
-  weighting. `--q4-rule flat` writes the same bytes.
+  weighting. `scripts/q4_patch_gguf.py --rule flat` writes the same bytes.
 - **llama.cpp search:** llama.cpp's 19 candidates with the same weighting.
 
 Both were made with a matrix in which every channel has the same importance,
@@ -190,7 +198,12 @@ measured as above, without an importance matrix. Changes are against rounded:
 | SmolLM2 1.7B Instruct | 8.48 | 9.74 | 9.70 | 0.1674 | 0.1635 | 0.1579 | −2.3% | −5.6% |
 | Llama 3.2 3B Instruct | 10.10 | 10.77 | 10.80 | 0.0682 | 0.0674 | 0.0647 | −1.2% | −5.1% |
 
-- **Flat beats the plain fit on all seven** and rounding on six.
+- **Flat beats the plain fit on all seven** and rounding on six. Paired chunk
+  by chunk over the 32 chunks, its gain over rounding is more than twice its
+  standard error on five: SmolLM2 135M (−5.4%, standard error 0.8), SmolLM2
+  1.7B (−5.6%, 1.2), Llama 3.2 3B (−5.1%, 1.8), TinyLlama 1.1B Chat (−4.2%,
+  1.6) and Llama 3.2 1B (−3.9%, 1.7). On SmolLM2 360M (−1.5%, 1.7) it is
+  within the noise.
 - **The plain fit does not beat rounding on these models:** it is lower on
   four and higher on three, by up to 10%.
 - **TinyLlama v1.1** is the exception. One of the 32 chunks raises both
@@ -215,12 +228,16 @@ The other architectures keep their rules:
   the plain fit until more models settle it.
 - **Gemma 3 1B:** `flat` was 3% above rounded.
 
-The importance-matrix and format tables cover the first seven models only.
+The default by `model_type` is a cautious reading of twelve models, not a
+mechanism: nothing measured here explains why Qwen3 1.7B or Gemma 3 go the
+other way. For a model not listed, `scripts/compare_q4.sh` (below) measures
+the rules directly, and `--q4-rule` picks one. The importance-matrix and
+format tables cover the first seven models only.
 
 ## Q4_0 against other formats
 
-For scale, here are the best Q4_0 of each model, Q4_K_M and Q8_0, all from
-`llama-quantize`.
+For scale, here are the best Q4_0 of each model from either quantizer, and
+Q4_K_M and Q8_0 from `llama-quantize`.
 
 - Q4_K_M keeps some tensors in Q6_K, which is why it is larger.
 - Sizes are whole files in MiB.
@@ -235,8 +252,8 @@ For scale, here are the best Q4_0 of each model, Q4_K_M and Q8_0, all from
 | Gemma 3 1B it | 543 | 0.2286 | 769 | 0.0919 | 0.0602 | 0.0041 |
 | Qwen3 1.7B | 929 | 0.1528 | 1056 | 0.1163 | 0.0631 | 0.0035 |
 
-The block scale moves Q4_0's KLD by up to 10%, and an importance matrix by
-1–32%. Within Krafla's formats, keeping
+The block-scale rule moves Q4_0's KLD by up to 14% (the converter's defaults
+by up to 9%), and an importance matrix by 1–32%. Within Krafla's formats, keeping
 the most sensitive matrices in Q8 does more for the bytes it costs
 (`--q8 v,o,down`, see [Q8, Q4, or mixed?](user-guide.md#q8-q4-or-mixed)).
 

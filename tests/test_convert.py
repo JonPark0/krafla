@@ -380,6 +380,56 @@ def test_hf_q4_auto_rule(tmp_path):
             pass
 
 
+def test_write_mlb_flat_rule(tmp_path):
+    """flat weights the layers' matrices only, tied or untied classifier; a rule
+    name is checked before the file is made; an importance matrix needs fit."""
+    cfg, w = gen_random.generate(dict(SMALL), seed=4)
+    for shared in (0, 1):
+        c = dict(cfg, shared_classifier=shared)
+        out = {}
+        for rule in ("fit", "flat"):
+            out[rule] = str(tmp_path / f"{rule}{shared}.mlb")
+            mlb.write_mlb(out[rule], c, w, "q4", scales="f16", q4_rule=rule)
+        _, tf = mlb.read_mlb(out["flat"])
+        _, tg = mlb.read_mlb(out["fit"])
+        for k in ("tok_emb",) + (() if shared else ("wcls",)):
+            assert np.array_equal(tf[k].q, tg[k].q) and np.array_equal(tf[k].d, tg[k].d), (k, shared)
+        assert not np.array_equal(tf["layers"][0]["wq"].q, tg["layers"][0]["wq"].q)
+    bad = tmp_path / "bad.mlb"
+    for kw in (dict(q4_rule="Flat"), dict(q4_rule="flat", imatrix={"layers": [], "cls": None, "tokens": 1})):
+        try:
+            mlb.write_mlb(str(bad), cfg, w, "q4", **kw)
+            raise AssertionError(kw)
+        except ValueError:
+            pass
+        assert not bad.exists()
+
+
+def test_convert_imatrix_on_llama_picks_fit(tmp_path):
+    """auto with --imatrix takes the fit, also where auto would be flat."""
+    d, cfg, _ = _make_hf(tmp_path / "l")
+    n = cfg["n_layers"] * (3 * cfg["dim"] + cfg["hidden_dim"]) + cfg["dim"]
+    rng = np.random.default_rng(1)
+    imat = tmp_path / "x.imat"
+    imat.write_bytes(mlb._IMAT.pack(b"MLI1", 1, cfg["n_layers"], cfg["dim"], cfg["hidden_dim"], 0, 3, 3)
+                     + (rng.uniform(0.5, 2.0, n) * 3).tobytes())
+    a, b = str(tmp_path / "a.mlb"), str(tmp_path / "b.mlb")
+    convert.main(["hf", d, a, "--wtype", "q4", "--imatrix", str(imat)])
+    convert.main(["hf", d, b, "--wtype", "q4", "--imatrix", str(imat), "--q4-rule", "fit"])
+    assert open(a, "rb").read() == open(b, "rb").read()
+
+
+def test_llama2c_q4_auto_rule(tmp_path):
+    """llama2c checkpoints keep the fit (flat was measured on HF models only)."""
+    cfg, w = gen_random.generate(dict(SMALL), seed=3)
+    src = str(tmp_path / "m.bin")
+    _write_llama2c(src, cfg, w, shared=False)
+    a, b = str(tmp_path / "a.mlb"), str(tmp_path / "b.mlb")
+    convert.main(["llama2c", src, a, "--wtype", "q4"])
+    convert.main(["llama2c", src, b, "--wtype", "q4", "--q4-rule", "fit"])
+    assert open(a, "rb").read() == open(b, "rb").read()
+
+
 def test_hf_tied_model_runs_in_c(tmp_path):
     exe = os.path.join(ROOT, "build", "scalar", "ml_run")
     if not os.path.exists(exe):

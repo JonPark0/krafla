@@ -39,6 +39,8 @@ archives also hold the model tools `tools/convert.py`,
 `tools/convert_tokenizer.py` and `tools/perplexity.py`, which need Python 3
 with numpy.
 
+![Which build the release starts, fastest first: on x86-64 avx512vnni, avxvnni, avx2, sse41, sse2; on AArch64 neon_i8mm, sve, neon_dotprod, neon; each with the CPU flag it needs and example CPUs](assets/isa-ladder.svg)
+
 `scripts/package_release.sh` builds the same archives locally, and
 `scripts/smoke_release.sh` runs them. To cut a release, merge a version bump
 into main that raises `ML_VERSION` in `core/ml.h` to X.Y.Z and renames
@@ -92,7 +94,7 @@ directory, so object files built with different flags never mix.
 | `neon`         | ARMv7 with NEON (Cortex-A7, A9, A15 and others), any AArch64 |
 | `neon_dotprod` | ARMv8.2 dotprod (Cortex-A55/A76 and later, Apple M1 and later, Graviton 2 and later) |
 | `neon_i8mm`    | dotprod + int8 matrix multiply (Cortex-A510/A710/X2 and later, Neoverse N2/V1, Apple M2 and later, Graviton 3 and later) |
-| `sve`          | SVE CPUs (Neoverse V1/V2/N2, A64FX, Graviton 3 and later) |
+| `sve`          | SVE CPUs with dotprod (Neoverse V1/V2/N2, Graviton 3 and later; not A64FX, which lacks dotprod) |
 
 To find what a Linux machine supports, run
 `grep -o -w -E 'sse4_1|avx2|avx_vnni|avx512_vnni|asimddp|i8mm|sve' /proc/cpuinfo | sort -u`.
@@ -328,6 +330,13 @@ and "Q4" are short for `Q8_0` and `Q4_0`:
 Choose Q8 for accuracy and Q4 for size. In between, `--q8` keeps some matrix
 classes of a Q4 model in Q8 (`emb`, `cls`, `qk`, `v`, `o`, `up`, `down`):
 
+![Where each matrix class sits in a layer: the embedding (emb), the attention's Wq and Wk (qk), Wv (v) and Wo (o), the feed-forward's W1 and W3 (up) and W2 (down), and the classifier (cls); v, o and down are marked](assets/layer-flow.svg)
+
+A tied embedding (Qwen2.5 0.5B, Llama 3.2 1B, SmolLM2, Gemma 3) is also the
+classifier, so `--q8 emb` or `--q8 cls` keeps it in Q8. In Qwen3.5's
+linear-attention layers, `lqkv` and the attention gate take the class `qk`,
+`lz` takes `v` and `lout` takes `o`; their two small gates are always Q8.
+
 ```sh
 python3 tools/convert.py hf ./Llama-3.2-1B-Instruct llama.mlb --wtype q4 --q8 v,o,down
 ```
@@ -366,7 +375,7 @@ Small models lose more to Q4: here `up` and `down` matter most, then `v`.
 The converter fits each Q4 block's scale by weighted least squares over a few
 candidate mappings, rather than dividing the block's maximum by 7, as earlier
 versions of the converter did (Llama 3.2 1B Q4: 19.91 instead of 20.46;
-Qwen2.5 0.5B: 21.73 instead of 23.58). The file format and the kernels are
+Qwen2.5 0.5B: 21.74 instead of 23.58). The file format and the kernels are
 unchanged, so older Q4 files still load; convert again to get the better
 scales. See [the quantization rule](file-format.md#quantization-rule).
 
@@ -407,14 +416,14 @@ models are fitted by x². `--q4-rule fit|flat|round` overrides the choice.
 
 | Q4 rule (f16 scales) | Qwen2.5 0.5B | Llama 3.2 1B | Qwen3 0.6B | SmolLM2 135M | Gemma 3 1B | Gemma 3 1B QAT |
 |---|---:|---:|---:|---:|---:|---:|
-| fit | **21.73** | 19.90 | **31.69** | 31.60 | 53.25 | 47.43 |
+| fit | **21.74** | 19.91 | **31.69** | 31.60 | 53.25 | 47.43 |
 | flat | 22.25 | **19.67** | 33.11 | **31.25** | — | — |
 | round | 22.45 | 19.94 | 31.75 | 32.31 | **49.83** | **40.50** |
 
-On these 2044 tokens `flat` loses to the fit on both Qwen models. Over 8,192
-tokens it is ahead on Qwen3 0.6B (21.49 against 21.70 with
-`tools/perplexity.py --llama-cpp`), but 14% behind in KL divergence on Qwen3
-1.7B, so Qwen keeps the fit.
+On these 2044 tokens `flat` loses to the fit on both Qwen models. Over 8,160
+tokens it is ahead in KL divergence on three of the four Qwen models measured
+(Qwen3 0.6B: perplexity 21.49 against 21.70 with `tools/perplexity.py
+--llama-cpp`), but 14% behind on Qwen3 1.7B, so Qwen keeps the fit.
 
 An importance matrix (`--imatrix`) tells the fit which weights matter most.
 It records how large each input channel's activations are on sample text, and

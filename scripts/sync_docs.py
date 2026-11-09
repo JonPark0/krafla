@@ -8,6 +8,9 @@ they are current (--check, run in CI):
                                  rules against rounding, docs/q4-scales.md
   docs/assets/q4-mixed.svg       Llama 3.2 1B's size and perplexity with
                                  --q8 classes, docs/user-guide.md
+  docs/assets/<figure>.svg       the concept diagrams of scripts/docfigs.py
+                                 (FIGURES), drawn from tools/mlb.py and the
+                                 release scripts
   docs/changelog.md              CHANGELOG.md, as a page of the docs site
 
     python3 scripts/sync_docs.py            # rewrite
@@ -19,6 +22,8 @@ import os
 import re
 import sys
 
+from docfigs import FIGURES, hbar, svg_head
+
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 BENCH = os.path.join(ROOT, "docs", "benchmarks.md")
 Q4_NOTE = os.path.join(ROOT, "docs", "q4-scales.md")
@@ -27,6 +32,7 @@ CHART = os.path.join(ROOT, "docs", "assets", "decode-ratio.svg")
 PREFILL_CHART = os.path.join(ROOT, "docs", "assets", "prefill-ratio.svg")
 Q4_CHART = os.path.join(ROOT, "docs", "assets", "q4-kld.svg")
 MIXED_CHART = os.path.join(ROOT, "docs", "assets", "q4-mixed.svg")
+ASSETS = os.path.join(ROOT, "docs", "assets")
 CHANGELOG = os.path.join(ROOT, "CHANGELOG.md")
 CHANGELOG_PAGE = os.path.join(ROOT, "docs", "changelog.md")
 CHANGELOG_FRONT = """---
@@ -77,50 +83,6 @@ def num(cell):
     if not m:
         sys.exit(f"not a number: {cell!r}")
     return float(m.group(0).replace("−", "-"))
-
-
-# Charts: one style for all. Blue and orange are the first two categorical
-# slots of a palette checked for color-vision deficiency (adjacent CVD ΔE 25
-# light, 27 dark) and for 3:1 contrast on both backgrounds. They follow the
-# reader's system setting, as images cannot see the site's switch.
-STYLE = (".bg{fill:#fff;stroke:#e5e7eb}.t{fill:#1f2937}.m{fill:#6b7280}.g{stroke:#eceef1}"
-         ".ax{stroke:#9ca3af}.s1{fill:#2a78d6}.s2{fill:#eb6834}.lb{fill:#fff}.ring{stroke:#fff}"
-         ".cn{stroke:#c9ccd1}.h{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}\n"
-         "@media (prefers-color-scheme:dark){.bg{fill:#1f2023;stroke:#3a3b40}.t{fill:#e5e7eb}"
-         ".m{fill:#9ca3af}.g{stroke:#2e3035}.ax{stroke:#6b7280}.s1{fill:#3987e5}.s2{fill:#d95926}"
-         ".lb{fill:#1f2023}.ring{stroke:#1f2023}.cn{stroke:#4b4f57}.h{stroke:#1f2023}}")
-
-
-def svg_head(cid, W, H, title, subtitle, desc, legend=()):
-    """Opening of a chart: card, title, subtitle and a legend of (class, label, mark)
-    at the top right, mark "bar" or "dot"."""
-    out = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" '
-        f'role="img" aria-labelledby="{cid}-title {cid}-desc" font-family="system-ui, -apple-system, '
-        'Segoe UI, Roboto, Helvetica, Arial, sans-serif">',
-        f'<title id="{cid}-title">{title}</title>',
-        f'<desc id="{cid}-desc">{desc}</desc>',
-        f"<style>\n{STYLE}\n</style>",
-        f'<rect class="bg" x="0.5" y="0.5" width="{W - 1}" height="{H - 1}" rx="8"/>',
-        f'<text class="t" x="20" y="32" font-size="17" font-weight="600">{title}</text>',
-        f'<text class="m" x="20" y="54" font-size="13">{subtitle}</text>',
-    ]
-    x = W - 20
-    for cls, label, mark in reversed(legend):
-        x -= 7.2 * len(label) + 30
-        if mark == "dot":
-            out.append(f'<circle class="{cls}" cx="{x + 6}" cy="74" r="5"/>')
-        else:
-            out.append(f'<rect class="{cls}" x="{x}" y="68" width="12" height="12" rx="3"/>')
-        out.append(f'<text class="t" x="{x + 17}" y="79" font-size="13">{label}</text>')
-    return out
-
-
-def hbar(cls, x0, y, w, h, r=4):
-    """A bar from the baseline x0, square there, rounded at its data end."""
-    r = min(r, w / 2, h / 2)
-    return (f'<path class="{cls}" d="M{x0:.1f},{y:.1f}h{w - r:.1f}a{r},{r} 0 0 1 {r},{r}v{h - 2 * r:.1f}'
-            f'a{r},{r} 0 0 1 {-r},{r}h{-(w - r):.1f}z"/>')
 
 
 def ratio_groups(column):
@@ -190,14 +152,23 @@ def ratio_chart(cid, groups, title, subtitle):
 def q4_rows():
     """[(group label, [(model, fit change %, flat change %)])], KL divergence
     against llama.cpp's rounded Q4_0, from docs/q4-scales.md."""
-    kld = {}
+    # percentages the tables state are taken as stated (they come from the
+    # full-precision KLDs); the rest are computed from the 4-decimal KLDs
+    kld, stated = {}, {}
     for r in table_with(Q4_NOTE, "Which part of the rule matters", "Fitted, llama.cpp weights"):
         kld[r["Model"]] = (num(r["Rounded"]), num(r["Fitted, `x²`"]), num(r["Fitted, llama.cpp weights"]))
+    for r in table_with(Q4_NOTE, "Without an importance matrix", "KLD change"):
+        stated.setdefault(r["Model"], {})["fit"] = num(r["KLD change"])
     llama = []
     for r in table_with(Q4_NOTE, "Llama architecture models", "Flat KLD"):
         kld[r["Model"]] = (num(r["Rounded KLD"]), num(r["Fitted KLD"]), num(r["Flat KLD"]))
+        stated[r["Model"]] = {"fit": num(r["Fitted change"]), "flat": num(r["Flat change"])}
         llama.append(r["Model"])
-    change = lambda m: (m, *[(v / kld[m][0] - 1) * 100 for v in kld[m][1:]])   # noqa: E731
+
+    def change(m):
+        r, f, g = kld[m]
+        s = stated.get(m, {})
+        return m, s.get("fit", (f / r - 1) * 100), s.get("flat", (g / r - 1) * 100)
     qwen = [m for m in kld if m.startswith("Qwen")]
     gemma = [m for m in kld if m.startswith("Gemma")]
     if len(qwen) + len(llama) + len(gemma) != len(kld):
@@ -307,6 +278,7 @@ def targets():
                                    "Qwen2.5 0.5B Instruct, 128-token prompt; above 1× Krafla is faster"),
         Q4_CHART: q4_chart(q4_rows()),
         MIXED_CHART: mixed_chart(mixed_points()),
+        **{os.path.join(ASSETS, name): draw() for name, draw in FIGURES.items()},
         CHANGELOG_PAGE: changelog_page(),
     }
 

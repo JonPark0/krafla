@@ -1,0 +1,197 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 500" width="760" height="500" role="img" aria-labelledby="pk-title pk-desc" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<title id="pk-title">Weight packing: G rows interleaved in 4-byte steps</title>
+<desc id="pk-desc">Row-major order stores row 0's 32 bytes, then row 1's. The packed order stores step 0 (bytes 0 to 3) of rows 0 to 3, then step 1 of rows 0 to 3, and so on. One 16-byte load then holds 4 bytes of each of the 4 rows, and one dot instruction against 4 activation bytes broadcast to every lane adds to all 4 rows' sums.</desc>
+<style>
+.bg{fill:#fff;stroke:#e5e7eb}.t{fill:#1f2937}.m{fill:#6b7280}.g{stroke:#eceef1}.ax{stroke:#9ca3af}.s1{fill:#2a78d6}.s2{fill:#eb6834}.s3{fill:#1baf7a}.s4{fill:#eda100}.k1{stroke:#2a78d6}.k2{stroke:#eb6834}.k3{stroke:#1baf7a}.k4{stroke:#eda100}.sx{fill:#9ca3af}.k0{stroke:#c9ccd1}.f1{fill:#e4eefb}.f2{fill:#fde9e0}.f3{fill:#dcf4ea}.f4{fill:#fdf1d6}.f0{fill:#f3f4f6}.lb{fill:#fff}.ring{stroke:#fff}.cn{stroke:#c9ccd1}.ln{stroke:#9ca3af;fill:none}.box{fill:#fff;stroke:#c9ccd1}.on{fill:#fff}.ondk{fill:#1f2937}.ah{fill:#9ca3af}.h{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}.r0{fill:#184f95}.r1{fill:#256abf}.r2{fill:#3987e5}.r3{fill:#6da7ec}.r4{fill:#9ec5f4}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+@media (prefers-color-scheme:dark){.bg{fill:#1f2023;stroke:#3a3b40}.t{fill:#e5e7eb}.m{fill:#9ca3af}.g{stroke:#2e3035}.ax{stroke:#6b7280}.s1{fill:#3987e5}.s2{fill:#d95926}.sx{fill:#6b7280}.k0{stroke:#4b4f57}.s3{fill:#199e70}.s4{fill:#c98500}.k1{stroke:#3987e5}.k2{stroke:#d95926}.k3{stroke:#199e70}.k4{stroke:#c98500}.f1{fill:#1d2d45}.f2{fill:#3b2519}.f3{fill:#16362b}.f4{fill:#382d12}.f0{fill:#2a2c31}.lb{fill:#1f2023}.ring{stroke:#1f2023}.cn{stroke:#4b4f57}.ln{stroke:#6b7280}.box{fill:#1f2023;stroke:#4b4f57}.ah{fill:#6b7280}.h{stroke:#1f2023}.r0{fill:#b7d3f6}.r1{fill:#86b6ef}.r2{fill:#5598e7}.r3{fill:#2a78d6}.r4{fill:#1c5cab}}
+</style>
+<defs><marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0L8,4L0,8z"/></marker></defs>
+<rect class="bg" x="0.5" y="0.5" width="759" height="499" rx="8"/>
+<text class="t" x="20" y="32" font-size="17" font-weight="600">Weight packing: G rows interleaved in 4-byte steps</text>
+<text class="m" x="20" y="54" font-size="13">Q8_0, G = 4 (SSE2, SSE4.1, NEON); G is 8 for AVX2 and AVX-VNNI, 16 for AVX-512 VNNI</text>
+<rect class="s4" x="674.0" y="68" width="12" height="12" rx="3"/>
+<text class="t" x="691.0" y="79" font-size="13">row 3</text>
+<rect class="s3" x="608.0" y="68" width="12" height="12" rx="3"/>
+<text class="t" x="625.0" y="79" font-size="13">row 2</text>
+<rect class="s2" x="542.0" y="68" width="12" height="12" rx="3"/>
+<text class="t" x="559.0" y="79" font-size="13">row 1</text>
+<rect class="s1" x="476.0" y="68" width="12" height="12" rx="3"/>
+<text class="t" x="493.0" y="79" font-size="13">row 0</text>
+<text class="t" x="20.0" y="94.0" font-size="13" font-weight="600">Row-major (the file)</text>
+<text class="m" x="180.0" y="94.0" font-size="11">each row's block in turn; the digit is the 4-byte step</text>
+<rect class="s1" x="61.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="70.0" y="131.0" font-size="11" text-anchor="middle">0</text>
+<rect class="s1" x="81.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="90.0" y="131.0" font-size="11" text-anchor="middle">1</text>
+<rect class="s1" x="101.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="110.0" y="131.0" font-size="11" text-anchor="middle">2</text>
+<rect class="s1" x="121.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="130.0" y="131.0" font-size="11" text-anchor="middle">3</text>
+<rect class="s1" x="141.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="150.0" y="131.0" font-size="11" text-anchor="middle">4</text>
+<rect class="s1" x="161.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="170.0" y="131.0" font-size="11" text-anchor="middle">5</text>
+<rect class="s1" x="181.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="190.0" y="131.0" font-size="11" text-anchor="middle">6</text>
+<rect class="s1" x="201.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="210.0" y="131.0" font-size="11" text-anchor="middle">7</text>
+<rect class="s2" x="221.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="230.0" y="131.0" font-size="11" text-anchor="middle">0</text>
+<rect class="s2" x="241.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="250.0" y="131.0" font-size="11" text-anchor="middle">1</text>
+<rect class="s2" x="261.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="270.0" y="131.0" font-size="11" text-anchor="middle">2</text>
+<rect class="s2" x="281.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="290.0" y="131.0" font-size="11" text-anchor="middle">3</text>
+<rect class="s2" x="301.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="310.0" y="131.0" font-size="11" text-anchor="middle">4</text>
+<rect class="s2" x="321.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="330.0" y="131.0" font-size="11" text-anchor="middle">5</text>
+<rect class="s2" x="341.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="350.0" y="131.0" font-size="11" text-anchor="middle">6</text>
+<rect class="s2" x="361.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="370.0" y="131.0" font-size="11" text-anchor="middle">7</text>
+<rect class="s3" x="381.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="390.0" y="131.0" font-size="11" text-anchor="middle">0</text>
+<rect class="s3" x="401.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="410.0" y="131.0" font-size="11" text-anchor="middle">1</text>
+<rect class="s3" x="421.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="430.0" y="131.0" font-size="11" text-anchor="middle">2</text>
+<rect class="s3" x="441.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="450.0" y="131.0" font-size="11" text-anchor="middle">3</text>
+<rect class="s3" x="461.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="470.0" y="131.0" font-size="11" text-anchor="middle">4</text>
+<rect class="s3" x="481.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="490.0" y="131.0" font-size="11" text-anchor="middle">5</text>
+<rect class="s3" x="501.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="510.0" y="131.0" font-size="11" text-anchor="middle">6</text>
+<rect class="s3" x="521.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="530.0" y="131.0" font-size="11" text-anchor="middle">7</text>
+<rect class="s4" x="541.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="ondk" x="550.0" y="131.0" font-size="11" text-anchor="middle">0</text>
+<rect class="s4" x="561.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="ondk" x="570.0" y="131.0" font-size="11" text-anchor="middle">1</text>
+<rect class="s4" x="581.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="ondk" x="590.0" y="131.0" font-size="11" text-anchor="middle">2</text>
+<rect class="s4" x="601.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="ondk" x="610.0" y="131.0" font-size="11" text-anchor="middle">3</text>
+<rect class="s4" x="621.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="ondk" x="630.0" y="131.0" font-size="11" text-anchor="middle">4</text>
+<rect class="s4" x="641.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="ondk" x="650.0" y="131.0" font-size="11" text-anchor="middle">5</text>
+<rect class="s4" x="661.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="ondk" x="670.0" y="131.0" font-size="11" text-anchor="middle">6</text>
+<rect class="s4" x="681.0" y="116.0" width="18.0" height="22.0" rx="3"/>
+<text class="ondk" x="690.0" y="131.0" font-size="11" text-anchor="middle">7</text>
+<line class="ln" x1="60.0" y1="146.0" x2="700.0" y2="146.0" stroke-width="1" marker-end="url(#ah)"/>
+<text class="m" x="706.0" y="150.0" font-size="11">memory</text>
+<text class="t" x="20.0" y="180.0" font-size="13" font-weight="600">Packed (in memory, at load)</text>
+<text class="m" x="231.8" y="180.0" font-size="11">step s of every row in the group, then step s + 1</text>
+<rect class="s1" x="61.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="70.0" y="217.0" font-size="11" text-anchor="middle">0</text>
+<rect class="s2" x="81.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="90.0" y="217.0" font-size="11" text-anchor="middle">0</text>
+<rect class="s3" x="101.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="110.0" y="217.0" font-size="11" text-anchor="middle">0</text>
+<rect class="s4" x="121.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="ondk" x="130.0" y="217.0" font-size="11" text-anchor="middle">0</text>
+<rect class="s1" x="141.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="150.0" y="217.0" font-size="11" text-anchor="middle">1</text>
+<rect class="s2" x="161.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="170.0" y="217.0" font-size="11" text-anchor="middle">1</text>
+<rect class="s3" x="181.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="190.0" y="217.0" font-size="11" text-anchor="middle">1</text>
+<rect class="s4" x="201.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="ondk" x="210.0" y="217.0" font-size="11" text-anchor="middle">1</text>
+<rect class="s1" x="221.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="230.0" y="217.0" font-size="11" text-anchor="middle">2</text>
+<rect class="s2" x="241.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="250.0" y="217.0" font-size="11" text-anchor="middle">2</text>
+<rect class="s3" x="261.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="270.0" y="217.0" font-size="11" text-anchor="middle">2</text>
+<rect class="s4" x="281.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="ondk" x="290.0" y="217.0" font-size="11" text-anchor="middle">2</text>
+<rect class="s1" x="301.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="310.0" y="217.0" font-size="11" text-anchor="middle">3</text>
+<rect class="s2" x="321.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="330.0" y="217.0" font-size="11" text-anchor="middle">3</text>
+<rect class="s3" x="341.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="350.0" y="217.0" font-size="11" text-anchor="middle">3</text>
+<rect class="s4" x="361.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="ondk" x="370.0" y="217.0" font-size="11" text-anchor="middle">3</text>
+<rect class="s1" x="381.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="390.0" y="217.0" font-size="11" text-anchor="middle">4</text>
+<rect class="s2" x="401.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="410.0" y="217.0" font-size="11" text-anchor="middle">4</text>
+<rect class="s3" x="421.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="430.0" y="217.0" font-size="11" text-anchor="middle">4</text>
+<rect class="s4" x="441.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="ondk" x="450.0" y="217.0" font-size="11" text-anchor="middle">4</text>
+<rect class="s1" x="461.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="470.0" y="217.0" font-size="11" text-anchor="middle">5</text>
+<rect class="s2" x="481.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="490.0" y="217.0" font-size="11" text-anchor="middle">5</text>
+<rect class="s3" x="501.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="510.0" y="217.0" font-size="11" text-anchor="middle">5</text>
+<rect class="s4" x="521.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="ondk" x="530.0" y="217.0" font-size="11" text-anchor="middle">5</text>
+<rect class="s1" x="541.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="550.0" y="217.0" font-size="11" text-anchor="middle">6</text>
+<rect class="s2" x="561.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="570.0" y="217.0" font-size="11" text-anchor="middle">6</text>
+<rect class="s3" x="581.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="590.0" y="217.0" font-size="11" text-anchor="middle">6</text>
+<rect class="s4" x="601.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="ondk" x="610.0" y="217.0" font-size="11" text-anchor="middle">6</text>
+<rect class="s1" x="621.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="630.0" y="217.0" font-size="11" text-anchor="middle">7</text>
+<rect class="s2" x="641.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="650.0" y="217.0" font-size="11" text-anchor="middle">7</text>
+<rect class="s3" x="661.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="on" x="670.0" y="217.0" font-size="11" text-anchor="middle">7</text>
+<rect class="s4" x="681.0" y="202.0" width="18.0" height="22.0" rx="3"/>
+<text class="ondk" x="690.0" y="217.0" font-size="11" text-anchor="middle">7</text>
+<line class="ln" x1="60.0" y1="232.0" x2="700.0" y2="232.0" stroke-width="1" marker-end="url(#ah)"/>
+<text class="m" x="706.0" y="236.0" font-size="11">memory</text>
+<path class="ln" d="M61,196v-5h78v5" stroke-width="1.2"/>
+<text class="m" x="148.0" y="194.0" font-size="11">one 16-byte load: 4 bytes of each row</text>
+<text class="t" x="20.0" y="282.0" font-size="13" font-weight="600">One dot instruction advances all G rows</text>
+<rect class="s1" x="60.0" y="296.0" width="76.0" height="26.0" rx="4"/>
+<text class="on" x="98.0" y="313.0" font-size="10" text-anchor="middle">row 0 · 4 B</text>
+<rect class="s2" x="140.0" y="296.0" width="76.0" height="26.0" rx="4"/>
+<text class="on" x="178.0" y="313.0" font-size="10" text-anchor="middle">row 1 · 4 B</text>
+<rect class="s3" x="220.0" y="296.0" width="76.0" height="26.0" rx="4"/>
+<text class="on" x="258.0" y="313.0" font-size="10" text-anchor="middle">row 2 · 4 B</text>
+<rect class="s4" x="300.0" y="296.0" width="76.0" height="26.0" rx="4"/>
+<text class="ondk" x="338.0" y="313.0" font-size="10" text-anchor="middle">row 3 · 4 B</text>
+<text class="m" x="218.0" y="340.0" font-size="16" text-anchor="middle">×</text>
+<rect class="f0 cn" x="60.0" y="350.0" width="76.0" height="26.0" rx="4" stroke-width="1"/>
+<text class="t" x="98.0" y="367.0" font-size="10" text-anchor="middle">x[c…c+3]</text>
+<rect class="f0 cn" x="140.0" y="350.0" width="76.0" height="26.0" rx="4" stroke-width="1"/>
+<text class="t" x="178.0" y="367.0" font-size="10" text-anchor="middle">x[c…c+3]</text>
+<rect class="f0 cn" x="220.0" y="350.0" width="76.0" height="26.0" rx="4" stroke-width="1"/>
+<text class="t" x="258.0" y="367.0" font-size="10" text-anchor="middle">x[c…c+3]</text>
+<rect class="f0 cn" x="300.0" y="350.0" width="76.0" height="26.0" rx="4" stroke-width="1"/>
+<text class="t" x="338.0" y="367.0" font-size="10" text-anchor="middle">x[c…c+3]</text>
+<text class="m" x="386.0" y="367.0" font-size="11">activation bytes, broadcast</text>
+<line class="ln" x1="390.0" y1="309.0" x2="440.0" y2="309.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<text class="t" x="446.0" y="305.0" font-size="11">vpdpbusd (VNNI) · sdot (NEON dotprod)</text>
+<text class="t" x="446.0" y="319.0" font-size="11">pmaddubsw + pmaddwd (SSE4.1, AVX2)</text>
+<rect class="s1" x="60.0" y="400.0" width="76.0" height="26.0" rx="4" opacity="0.9"/>
+<text class="on" x="98.0" y="417.0" font-size="10" text-anchor="middle">sum, row 0</text>
+<rect class="s2" x="140.0" y="400.0" width="76.0" height="26.0" rx="4" opacity="0.9"/>
+<text class="on" x="178.0" y="417.0" font-size="10" text-anchor="middle">sum, row 1</text>
+<rect class="s3" x="220.0" y="400.0" width="76.0" height="26.0" rx="4" opacity="0.9"/>
+<text class="on" x="258.0" y="417.0" font-size="10" text-anchor="middle">sum, row 2</text>
+<rect class="s4" x="300.0" y="400.0" width="76.0" height="26.0" rx="4" opacity="0.9"/>
+<text class="ondk" x="338.0" y="417.0" font-size="10" text-anchor="middle">sum, row 3</text>
+<line class="ln" x1="98.0" y1="378.0" x2="98.0" y2="397.0" stroke-width="1" marker-end="url(#ah)"/>
+<line class="ln" x1="178.0" y1="378.0" x2="178.0" y2="397.0" stroke-width="1" marker-end="url(#ah)"/>
+<line class="ln" x1="258.0" y1="378.0" x2="258.0" y2="397.0" stroke-width="1" marker-end="url(#ah)"/>
+<line class="ln" x1="338.0" y1="378.0" x2="338.0" y2="397.0" stroke-width="1" marker-end="url(#ah)"/>
+<text class="m" x="386.0" y="412.0" font-size="11">one int32 sum per row, in its own 32-bit lane;</text>
+<text class="m" x="386.0" y="426.0" font-size="11">the group's block scales sit together, so scaling</text>
+<text class="m" x="386.0" y="440.0" font-size="11">them is one vector multiply-add</text>
+<text class="m" x="20.0" y="470.0" font-size="11">Same layout, other inner loops: SSE2 (no 8-bit multiply) splits each 16-bit lane into its two bytes for pmaddwd;</text>
+<text class="m" x="20.0" y="485.0" font-size="11">NEON without dotprod multiplies with vmull_s8, folds with vpadalq_s16 and adds each row's partial sums once per block.</text>
+</svg>

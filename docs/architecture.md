@@ -129,6 +129,12 @@ Every matvec runs on integers:
 2. Each 32-weight block's dot product is computed as an int32.
 3. That int32 is scaled by `d_w · d_x` and accumulated in FP32.
 
+![One token through a layer: RMSNorm, Q8 quantization, the attention matrices Wq, Wk, Wv and Wo, RoPE and attention over the KV cache, then the feed-forward matrices W1, W3 and W2, each block added to the residual stream; the classifier after the last layer](assets/layer-flow.svg)
+
+The figure leaves out the per-model extras of the pseudo-code above: biases,
+Qwen3's q/k norms, Gemma's post-norms and GELU, and Qwen3.5's linear-attention
+layers.
+
 The RoPE cos/sin tables `[ctx][head_dim/2]` are computed once at load, in
 double precision, with llama3 scaling folded in.
 
@@ -163,6 +169,8 @@ repacks every weight matrix, except the embedding table, into a
   nibble) or masking (high nibble) gives `16 (q - 8)` as a signed byte for
   `sdot`/`smmla`. The conversion to float (`vcvtq_n_f32_s32`) removes the 16
   exactly, so no per-block sum is subtracted.
+
+![Weight packing with G = 4: row-major order stores each row's block in turn; the packed order stores the same 4-byte step of 4 rows together, so one 16-byte load and one dot instruction advance all 4 rows](assets/packing.svg)
 
 Matrices are packed one at a time, and each one's original mapped pages are
 released with `madvise(MADV_DONTNEED)` as soon as it is packed, so resident

@@ -6,6 +6,7 @@ Every figure is drawn from data, not by hand: the Q4 rule figure quantizes its
 block with tools/mlb.py, and the others take their facts from the code
 (mlb.Q8_CLASSES, the release wrappers' ISA order) as noted where they do.
 """
+import math
 import os
 import sys
 
@@ -28,13 +29,15 @@ STYLE = (
     ".lb{fill:#fff}.ring{stroke:#fff}.cn{stroke:#c9ccd1}.ln{stroke:#9ca3af;fill:none}"
     ".box{fill:#fff;stroke:#c9ccd1}.on{fill:#fff}.ondk{fill:#1f2937}.ah{fill:#9ca3af}"
     ".h{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}"
+    ".r0{fill:#184f95}.r1{fill:#256abf}.r2{fill:#3987e5}.r3{fill:#6da7ec}.r4{fill:#9ec5f4}"
     ".mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}\n"
     "@media (prefers-color-scheme:dark){.bg{fill:#1f2023;stroke:#3a3b40}.t{fill:#e5e7eb}"
     ".m{fill:#9ca3af}.g{stroke:#2e3035}.ax{stroke:#6b7280}.s1{fill:#3987e5}.s2{fill:#d95926}"
     ".sx{fill:#6b7280}.k0{stroke:#4b4f57}.s3{fill:#199e70}.s4{fill:#c98500}.k1{stroke:#3987e5}.k2{stroke:#d95926}.k3{stroke:#199e70}"
     ".k4{stroke:#c98500}.f1{fill:#1d2d45}.f2{fill:#3b2519}.f3{fill:#16362b}.f4{fill:#382d12}"
     ".f0{fill:#2a2c31}.lb{fill:#1f2023}.ring{stroke:#1f2023}.cn{stroke:#4b4f57}"
-    ".ln{stroke:#6b7280}.box{fill:#1f2023;stroke:#4b4f57}.ah{fill:#6b7280}.h{stroke:#1f2023}}"
+    ".ln{stroke:#6b7280}.box{fill:#1f2023;stroke:#4b4f57}.ah{fill:#6b7280}.h{stroke:#1f2023}"
+    ".r0{fill:#b7d3f6}.r1{fill:#86b6ef}.r2{fill:#5598e7}.r3{fill:#2a78d6}.r4{fill:#1c5cab}}"
 )
 
 ARROW = ('<defs><marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" '
@@ -118,7 +121,7 @@ def q4_block():
     for j in range(32):
         f, k = ("f1", "k1") if j < 16 else ("f2", "k2")
         out.append(rect(x0 + j * cw + 1, cy, cw - 2, ch, f"{f} {k}", 3))
-        out.append(text(x0 + j * cw + cw / 2, cy + 16, str(j), 10, "t", "middle"))
+        out.append(text(x0 + j * cw + cw / 2, cy + 16, str(j), 11, "t", "middle"))
     bw, by, bh = 40, 222, 30
     for j in range(32):    # a thread from each weight to its nibble
         k = "k1" if j < 16 else "k2"
@@ -129,8 +132,8 @@ def q4_block():
         x = x0 + b * bw
         out.append(rect(x + 1, by, bw / 2 - 1, bh, "f2 k2", 0))
         out.append(rect(x + bw / 2, by, bw / 2 - 1, bh, "f1 k1", 0))
-        out.append(text(x + bw * 0.25 + 0.5, by + 19, str(b + 16), 10, "t", "middle"))
-        out.append(text(x + bw * 0.75, by + 19, str(b), 10, "t", "middle"))
+        out.append(text(x + bw * 0.25 + 0.5, by + 19, str(b + 16), 11, "t", "middle"))
+        out.append(text(x + bw * 0.75, by + 19, str(b), 11, "t", "middle"))
         out.append(text(x + bw / 2, by + bh + 14, f"byte {b}" if b in (0, 15) else str(b), 10, "m", "middle"))
     out.append(text(x0 + bw * 0.25, by + bh + 28, "high", 10, "m", "middle"))
     out.append(text(x0 + bw * 0.75, by + bh + 28, "low", 10, "m", "middle"))
@@ -150,98 +153,106 @@ def q4_block():
 
 # ------------------------------------------------------- Q4 rules, one block
 
-def q4_rule_block():
-    """The block of 10,000 Gaussian ones whose x²-weighted error gain is the median."""
-    rng = np.random.default_rng(2026)
-    B = rng.standard_normal((10000, 32)).astype(np.float32)
-    lr, dr = mlb._q4_round(B)
-    lf, df = mlb._q4_search(B)
-    w = B * B
-    wr = (w * (B - lr * dr[:, None]) ** 2).sum(1)
-    wf = (w * (B - lf * df[:, None]) ** 2).sum(1)
-    gain = 1 - wf / wr
-    i = int(np.argsort(np.abs(gain - np.median(gain)))[0])
-    return B[i], (lr[i], float(dr[i])), (lf[i], float(df[i])), float(np.median(gain))
+# One block of 32 N(0, 1) weights (float32, exact): of 10,000 such blocks drawn
+# with np.random.RandomState(2026).standard_normal((10000, 32)), the one whose
+# x²-weighted error gain from the fit over rounding is closest to the median
+# gain, 13.5%. Frozen here so the figure depends on tools/mlb.py alone.
+RULE_BLOCK = [
+    1.3784735202789307, -0.42840808629989624, 0.31526798009872437, 0.22821161150932312,
+    -0.8554569482803345, 0.21669018268585205, 1.6993629932403564, 2.8866677284240723,
+    0.0889405757188797, 0.4782054126262665, -0.08589601516723633, 1.2714439630508423,
+    0.17268911004066467, 0.5323359370231628, 0.47243252396583557, -0.3709712624549866,
+    1.914878487586975, 1.218019723892212, -1.3213094472885132, -0.21773004531860352,
+    -0.5950336456298828, 0.6493209600448608, 0.5462523102760315, 0.9069897532463074,
+    -0.2608533501625061, 0.7947153449058533, -0.09541251510381699, 0.29951539635658264,
+    -0.7432442307472229, -0.34067896008491516, -0.05399332568049431, 1.0142261981964111]
+RULE_MEDIAN_GAIN = 0.135
+
+
+def weighted_error(x, lv, d):
+    """Error of one block weighted by x², summed exactly."""
+    return math.fsum(v * v * (v - q * d) ** 2 for v, q in zip(x, lv))
+
+
+def fit_candidates(x):
+    """[(d, levels)] of the fit's 13 candidates (mlb.Q4_STEPS), each d by least
+    squares as tools/mlb.py fits it; mlb._q4_search keeps the one of least error."""
+    b = np.asarray(x, np.float32)
+    mx = b[np.abs(b).argmax()]
+    y = b / mx
+    out = []
+    for s in mlb.Q4_STEPS:
+        lv = np.clip(np.rint(y * -(8 + s)), -8, 7)
+        w = b * b
+        d = float(mlb._sum32((w * b * lv)[None])[0] / mlb._sum32((w * lv * lv)[None])[0])
+        out.append((d, lv.tolist()))
+    return out
 
 
 def q4_rules():
-    x, (lr, dr), (lf, df), med = q4_rule_block()
-    W, H = 760, 420
-    left, right = 150, 196
-    M = float(np.abs(x).max()) * 1.12
-    sx = (W - left - right) / (2 * M)
-    X = lambda v: left + (v + M) * sx                                  # noqa: E731
-    yr, yw, yf = 132, 222, 312
-    wr = float((x * x * (x - lr * dr) ** 2).sum())
-    wf = float((x * x * (x - lf * df) ** 2).sum())
-    er = float(((x - lr * dr) ** 2).sum())
-    ef = float(((x - lf * df) ** 2).sum())
-    big = set(np.argsort(-np.abs(x))[:8].tolist())
-    desc = (f"32 Gaussian weights. Rounded: d = {dr:.4f}, the largest weight lands exactly on a level. "
-            f"Fitted: d = {df:.4f}. Error weighted by x squared: {wr:.3f} rounded, {wf:.3f} fitted "
-            f"({(wf / wr - 1) * 100:+.0f}%); plain squared error {er:.3f} and {ef:.3f}.")
-    out = svg_head("q4r", W, H, "Rounded against fitted scales, one block",
-                   f"32 Gaussian weights: the block at the median gain of 10,000 such blocks "
-                   f"(x²-weighted error {med * 100:.0f}% lower)", desc,
-                   (("sx", "rounded level", "bar"), ("s1", "fitted level", "bar")))
-    # level rows
-    for y, d, cls, k, label, sub in ((yr, dr, "sx", "ax", "Rounded", "llama.cpp: d = largest ÷ −8"),
-                                      (yf, df, "s1", "k1", "Fitted", "Krafla: d by least squares")):
-        lv = [d * (q - 8) for q in range(16)]
-        out.append(line(X(min(lv)), y, X(max(lv)), y, "g", 1))
-        for v in lv:
-            out.append(f'<rect class="{cls}" x="{X(v) - 1.5:.1f}" y="{y - 8}" width="3" height="16" rx="1.5"/>')
-        out.append(text(20, y - 2, label, 13, "t", weight=600))
-        out.append(text(20, y + 14, sub, 11, "m"))
-    # weights, stacked where they would overlap
-    placed = []
-    pos = {}
-    for j in np.argsort(x):
-        px = X(float(x[j]))
-        k = 0
-        while any(abs(px - qx) < 9 and qk == k for qx, qk in placed):
-            k += 1
-        placed.append((px, k))
-        off = ((k + 1) // 2) * 9 * (1 if k % 2 else -1)
-        pos[int(j)] = (px, yw + off)
-    out.append(text(20, yw + 4, "Weights", 13, "t", weight=600))
-    out.append(text(20, yw + 20, "8 largest in bold", 11, "m"))
-    for j, (px, py) in pos.items():
-        b = j in big
-        wd, op = (1.6, "1") if b else (1, "0.45")
-        out.append(line(px, py, X(float(lr[j] * dr)), yr + 8, "ax", wd, extra=f' opacity="{op}"'))
-        out.append(line(px, py, X(float(lf[j] * df)), yf - 8, "k1", wd, extra=f' opacity="{op}"'))
-    for j, (px, py) in pos.items():
-        cls = "t" if j in big else "m"
-        out.append(f'<circle class="{cls} ring" cx="{px:.1f}" cy="{py:.1f}" r="{4.5 if j in big else 3.5}" '
-                   'stroke-width="1.5"/>')
-    # numbers on the right
-    rx = W - right + 18
-    out.append(text(rx, yr - 6, f"d = {dr:.4f}", 12))
-    pct = lambda a, b: f"{(a / b - 1) * 100:+.0f}%".replace("-", "−")    # noqa: E731
-    out.append(text(rx, yr + 10, f"x²-weighted error {wr:.3f}", 11, "m"))
-    out.append(text(rx, yr + 24, f"squared error {er:.3f}", 11, "m"))
-    out.append(text(rx, yf - 6, f"d = {df:.4f}", 12))
-    out.append(text(rx, yf + 10, f"x²-weighted error {wf:.3f}, {pct(wf, wr)}", 11, "m"))
-    out.append(text(rx, yf + 24, f"squared error {ef:.3f}, {pct(ef, er)}", 11, "m"))
-    # value axis
-    ya = yf + 40
-    out.append(line(left, ya, W - right, ya, "ax", 1))
-    for v in (-2, -1, 0, 1, 2):
-        if -M <= v <= M:
-            out.append(line(X(v), ya, X(v), ya + 4, "ax", 1))
-            out.append(text(X(v), ya + 17, f"{v:+d}".replace("+0", "0").replace("-", "−"), 11, "m", "middle"))
-    out.append(text(20, H - 30, "Each line runs from a weight to the level it is stored as; its slant is the error. "
-                    "Rounding puts the largest weight exactly", 11, "m"))
-    out.append(text(20, H - 15, "on a level. The fit moves the levels so the large weights, whose errors cost "
-                    "most (x² weights), land closer.", 11, "m"))
+    xs = [float(v) for v in RULE_BLOCK]
+    b = np.asarray(xs, np.float32)[None]
+    lr, dr = mlb._q4_round(b)
+    lf, df = mlb._q4_search(b)
+    lr, dr, lf, df = lr[0].tolist(), float(dr[0]), lf[0].tolist(), float(df[0])
+    er, ef = weighted_error(xs, lr, dr), weighted_error(xs, lf, df)
+    cands = [(abs(d), weighted_error(xs, lv, d)) for d, lv in fit_candidates(xs)]
+    # the error at every scale, each weight rounded to its nearest level
+    sign = math.copysign(1, dr)
+    lo, hi = abs(dr) * 0.92, abs(dr) * 1.40
+    curve = []
+    for i in range(401):
+        d = (lo + (hi - lo) * i / 400) * sign
+        curve.append((abs(d), weighted_error(xs, [min(7, max(-8, round(v / d))) for v in xs], d)))
+    W, H, left, right, top, bottom = 760, 452, 70, 40, 92, 100
+    ymax = max(e for _, e in curve) * 1.05
+    pw, ph = W - left - right, H - top - bottom
+    X = lambda d: left + (d - lo) / (hi - lo) * pw                     # noqa: E731
+    Y = lambda e: top + ph - e / ymax * ph                             # noqa: E731
+    pct = f"{(ef / er - 1) * 100:+.0f}%".replace("-", "−")
+    desc = (f"x²-weighted error of one block of 32 Gaussian weights against its scale d. Rounding takes "
+            f"d = largest weight ÷ 8 = {abs(dr):.4f}, error {er:.3f}. The fit tries 13 mappings of the largest "
+            f"weight and fits d to each by least squares; it keeps d = {abs(df):.4f}, error {ef:.3f} ({pct}).")
+    out = svg_head("q4r", W, H, "Rounding against fitting the scale of one block",
+                   f"Error of 32 Gaussian weights (weighted by x²) at each scale d; the block is the median "
+                   f"of 10,000 by the fit's gain ({RULE_MEDIAN_GAIN * 100:.0f}%)", desc,
+                   (("sx", "rounded", "dot"), ("s1", "fit candidates", "dot")))
+    # axes and grid
+    step = 0.5 if ymax > 2 else 0.1
+    v = 0.0
+    while v <= ymax:
+        out.append(line(left, Y(v), W - right, Y(v), "g", 1))
+        out.append(text(left - 8, Y(v) + 4, f"{v:.1f}", 11, "m", "end"))
+        v = round(v + step, 6)
+    dstep = 0.01
+    t = math.ceil(lo / dstep) * dstep
+    while t <= hi:
+        out.append(line(X(t), top + ph, X(t), top + ph + 4, "ax", 1))
+        out.append(text(X(t), top + ph + 18, f"{t:.2f}", 11, "m", "middle"))
+        t = round(t + dstep, 6)
+    out.append(line(left, top + ph, W - right, top + ph, "ax", 1))
+    out.append(text(left + pw / 2, top + ph + 38, "scale d (absolute value)", 12, "m", "middle"))
+    out.append(text(20, top - 12, "x²-weighted error", 12, "m"))
+    pts = " ".join(f"{X(d):.1f},{Y(e):.1f}" for d, e in curve)
+    out.append(f'<polyline class="ln" points="{pts}" stroke-width="1.5" stroke-linejoin="round"/>')
+    for d, e in cands:
+        out.append(f'<circle class="s1 ring" cx="{X(d):.1f}" cy="{Y(e):.1f}" r="4" stroke-width="1.5" '
+                   'opacity="0.55"/>')
+    out.append(f'<circle class="sx ring" cx="{X(abs(dr)):.1f}" cy="{Y(er):.1f}" r="6" stroke-width="2"/>')
+    out.append(f'<circle class="s1 ring" cx="{X(abs(df)):.1f}" cy="{Y(ef):.1f}" r="6" stroke-width="2"/>')
+    out.append(text(X(abs(dr)), Y(er) - 14, f"rounded: {er:.3f}", 12, "t h", "middle"))
+    out.append(text(X(abs(df)) + 10, Y(ef) + 22, f"fitted: error {ef:.3f} ({pct})", 12, "t h", weight=600))
+    out.append(text(20, H - 30, "The curve rounds every weight to the nearest level of each d. Rounding takes "
+                    "d = largest weight ÷ 8; the fit tries 13", 11, "m"))
+    out.append(text(20, H - 15, "mappings of the largest weight, fits d to each, keeps the lowest (--q4-rule fit). "
+                    "flat weights the error by sqrt(s2 + x²) instead.", 11, "m"))
     return close(out)
 
 
 # ------------------------------------------------------------- weight packing
 
 def packing():
-    W, H = 760, 484
+    W, H = 760, 500
     G, S = 4, 8      # rows per group, 4-byte steps per Q8_0 block
     rows = ("s1", "s2", "s3", "s4")
     oncls = ("on", "on", "on", "ondk")    # white on blue, orange and aqua; dark on yellow
@@ -259,7 +270,7 @@ def packing():
         out.append(text(20 + 7.4 * len(label) + 12, y - 22, sub, 11, "m"))
         for i, (r, s) in enumerate(order):
             out.append(rect(x0 + i * cw + 1, y, cw - 2, ch, rows[r], 3))
-            out.append(text(x0 + i * cw + cw / 2, y + 15, str(s), 10, oncls[r], "middle"))
+            out.append(text(x0 + i * cw + cw / 2, y + 15, str(s), 11, oncls[r], "middle"))
         out.append(line(x0, y + ch + 8, x0 + len(order) * cw, y + ch + 8, "ln", 1, True))
         out.append(text(x0 + len(order) * cw + 6, y + ch + 12, "memory", 11, "m"))
 
@@ -297,8 +308,10 @@ def packing():
     out.append(text(lx + G * (lw + 4) + 6, ys + 12, "one int32 sum per row, in its own 32-bit lane;", 11, "m"))
     out.append(text(lx + G * (lw + 4) + 6, ys + 26, "the group's block scales sit together, so scaling", 11, "m"))
     out.append(text(lx + G * (lw + 4) + 6, ys + 40, "them is one vector multiply-add", 11, "m"))
-    out.append(text(20, H - 15, "SSE2 has no 8-bit multiply: it splits each 16-bit lane into its two bytes and "
-                    "uses pmaddwd, on the same layout.", 11, "m"))
+    out.append(text(20, H - 30, "Same layout, other inner loops: SSE2 (no 8-bit multiply) splits each 16-bit lane "
+                    "into its two bytes for pmaddwd;", 11, "m"))
+    out.append(text(20, H - 15, "NEON without dotprod multiplies with vmull_s8, folds with vpadalq_s16 and adds "
+                    "each row's partial sums once per block.", 11, "m"))
     return close(out)
 
 
@@ -308,8 +321,8 @@ def layer_flow():
     W, H = 760, 474
     cls_of = mlb._CLASS_OF
     q8_first = ("v", "o", "down")     # the classes the user guide keeps in Q8 first
-    out = svg_head("ly", W, H, "One token through a layer: where each matrix class sits",
-                   "Every matrix is an integer matvec on Q8 activations; tags are the --q8 class names",
+    out = svg_head("ly", W, H, "One token through a Llama-style layer, by matrix class",
+                   "Each matrix product is an integer matvec on Q8 activations; tags are the --q8 class names",
                    "Embedding row (class emb) to the residual stream x. Attention: RMSNorm, quantize to Q8, "
                    "Wq and Wk (class qk) and Wv (class v), RoPE, attention over the KV cache, quantize, Wo "
                    "(class o), added to x. Feed-forward: RMSNorm, quantize, W1 and W3 (class up), SiLU and "
@@ -374,15 +387,15 @@ def layer_flow():
     # embedding
     ye = 88
     mat(XL, ye, 150, ["tok_emb"], 28)
-    out.append(text(XL + 160, ye + 18, "the token's row becomes the residual stream x", 11, "m"))
+    out.append(text(XL + 160, ye + 18, "a row lookup: the token's row becomes the residual stream x", 11, "m"))
     out.append(line(XL + 16, ye + 28, XL + 16, 148, "ln", 1.5, True))
     residual_row(150, "Attention", [
-        ("op", 64, "RMSNorm"), ("op", 30, "Q8"), ("pair", 100, (["wq", "wk"], ["wv"])),
-        ("op", 44, "RoPE"), ("op", 124, "attention · KV cache"), ("op", 30, "Q8"), ("mat", 70, ["wo"])])
+        ("op", 64, "RMSNorm"), ("op", 58, "quantize"), ("pair", 100, (["wq", "wk"], ["wv"])),
+        ("op", 44, "RoPE"), ("op", 124, "attention · KV cache"), ("op", 58, "quantize"), ("mat", 70, ["wo"])])
     turn(150, 272, XL + 16)
     residual_row(272, "Feed-forward", [
-        ("op", 64, "RMSNorm"), ("op", 30, "Q8"), ("pair", 100, (["w1"], ["w3"])),
-        ("op", 92, "SiLU(W1)·W3"), ("op", 30, "Q8"), ("mat", 70, ["w2"])])
+        ("op", 64, "RMSNorm"), ("op", 58, "quantize"), ("pair", 100, (["w1"], ["w3"])),
+        ("op", 92, "SiLU(W1)·W3"), ("op", 58, "quantize"), ("mat", 76, ["w2"])])
     out.append('<path class="ln" d="M24,144v228" stroke-width="1"/>')
     out.append(text(14, 258, "× n_layers", 11, "m", "middle", extra=' transform="rotate(-90 14 258)"'))
     # classifier
@@ -390,28 +403,35 @@ def layer_flow():
     turn(272, yc, XL + 16)
     x = op(XL, yc, 64, "RMSNorm")
     arrow(x, x + 14, yc + 15)
-    x = op(x + 14, yc, 30, "Q8")
+    x = op(x + 14, yc, 58, "quantize")
     arrow(x, x + 14, yc + 15)
     x = mat(x + 14, yc, 90, ["wcls"])
     arrow(x, x + 14, yc + 15)
     out.append(text(x + 18, yc + 19, "logits", 12, "t", weight=600))
-    out.append(text(20, H - 16, "A matvec multiplies int8 activations by int8 or 4-bit weights, sums each 32-weight "
-                    "block exactly in int32, then scales it by d_w · d_x.", 11, "m"))
+    out.append(text(20, H - 16, "quantize: activations to Q8_0. A matvec multiplies them by int8 or 4-bit weights, "
+                    "sums each 32-weight block in int32, scales it by d_w · d_x.", 11, "m"))
     return close(out)
 
 
 # ------------------------------------------------------------------ ISA ladder
 
-X86 = [("avx512vnni", "avx512_vnni", "Intel Cascade Lake, Ice Lake, Sapphire Rapids;", "AMD Zen 4 and later"),
-       ("avxvnni", "avx_vnni", "Intel Alder Lake and later, AMD Zen 5", ""),
-       ("avx2", "avx2", "Intel Haswell and later, AMD Zen and later", ""),
-       ("sse41", "sse4_1", "Intel Penryn/Nehalem and later,", "AMD Bulldozer and later"),
-       ("sse2", "sse2", "every x86-64 CPU", "")]
-ARM = [("neon_i8mm", "i8mm", "Cortex-A510/A710/X2, Neoverse N2/V1,", "Apple M2, Graviton 3 and later"),
-       ("sve", "sve", "Neoverse V1/V2/N2, A64FX, Graviton 3", "(uses the dotprod kernels)"),
-       ("neon_dotprod", "asimddp", "Cortex-A55/A76, Apple M1, Graviton 2", "and later"),
-       ("neon", "asimd", "any AArch64; on ARMv7 boards with NEON (flag neon),",
-        "the armv7hf archive: neon, then scalar")]
+# Per rung, CPUs on which that rung is the first one the CPU supports (so the
+# one the wrappers start): a CPU with more features takes a higher rung. The
+# order must be the wrappers' own (checked against package_release.sh).
+X86 = [("avx512vnni", "avx512_vnni", "Intel Ice Lake, Tiger Lake, Cascade Lake and later Xeons;",
+        "AMD Zen 4 and later"),
+       ("avxvnni", "avx_vnni", "Intel Alder Lake and later client CPUs without AVX-512", ""),
+       ("avx2", "avx2", "Intel Haswell to Comet Lake, Skylake-SP; AMD Zen 1 to 3,", "Excavator"),
+       ("sse41", "sse4_1", "Intel Penryn to Ivy Bridge; AMD Bulldozer to Steamroller", ""),
+       ("sse2", "sse2", "older x86-64: Core 2 before Penryn, Athlon 64, Phenom", "")]
+ARM = [("neon_i8mm", "asimddp i8mm", "Cortex-A510/A710/X2 and later, Neoverse N2/V1/V2,",
+        "Apple M2 and later, Graviton 3 and later"),
+       ("sve", "asimddp sve", "SVE and dotprod without i8mm (rare: SVE CPUs with",
+        "i8mm take neon_i8mm); packed kernels from neon_dotprod"),
+       ("neon_dotprod", "asimddp", "Cortex-A55/A76/A78, Neoverse N1 (Graviton 2), Apple M1,",
+        "Raspberry Pi 5"),
+       ("neon", "asimd", "Cortex-A53/A72 (Raspberry Pi 3, 4), A64FX (no dotprod);",
+        "ARMv7 NEON boards: the armv7hf archive, neon then scalar")]
 
 
 def wrapper_order():
@@ -431,11 +451,10 @@ def isa_ladder():
                  f"({x86_order}, {arm_order})")
     W, H = 760, 566
     out = svg_head("isa", W, H, "Which build runs: from the fastest down",
-                   "The release's ml_run, ml_server and ml_bench start the first build the CPU supports",
+                   "The release's ml_run, ml_server, ml_bench and ml_tok start the first build the CPU supports",
                    "x86-64, fastest first: " + ", ".join(f"{b} ({f})" for b, f, *_ in X86)
                    + ". AArch64: " + ", ".join(f"{b} ({f})" for b, f, *_ in ARM)
                    + ". A build on a CPU without its features exits with code 3 and names the missing one.")
-    ramp = ("#184f95", "#256abf", "#3987e5", "#6da7ec", "#9ec5f4")    # blue, darker = faster
 
     def ladder(x, rungs, title, flag_note):
         out.append(text(x, 92, title, 14, "t", weight=600))
@@ -443,7 +462,7 @@ def isa_ladder():
         y, rh, gap = 122, 58, 18
         for i, (b, flag, l1, l2) in enumerate(rungs):
             out.append(rect(x, y, 340, rh, "box", 6, ' stroke-width="1"'))
-            out.append(f'<rect x="{x}" y="{y}" width="6" height="{rh}" rx="3" fill="{ramp[i]}"/>')
+            out.append(rect(x, y, 6, rh, f"r{i}", 3))
             out.append(text(x + 16, y + 22, b, 14, "t mono", weight=600))
             out.append(text(x + 330, y + 22, flag, 11, "m mono", "end"))
             out.append(text(x + 16, y + 39, l1, 11, "m"))
@@ -455,8 +474,10 @@ def isa_ladder():
             y += rh + gap
         return y
 
-    ladder(20, X86, "x86-64 (Linux and Windows archives)", "right: the /proc/cpuinfo flag it needs")
-    ladder(400, ARM, "AArch64 (linux-aarch64 archive)", "right: the /proc/cpuinfo flag it needs")
+    ladder(20, X86, "x86-64 (Linux and Windows archives)", "right: the /proc/cpuinfo flags it needs; "
+           "below: CPUs that stop here")
+    ladder(400, ARM, "AArch64 (linux-aarch64 archive)", "right: the /proc/cpuinfo flags it needs; "
+           "below: CPUs that stop here")
     out.append(text(20, H - 30, "KRAFLA_ISA=avx2 (for example) picks a build by hand. Started on a CPU without "
                     "its features, a build exits with code 3", 11, "m"))
     out.append(text(20, H - 15, "and names the missing one instead of crashing. Building from source: "
@@ -473,9 +494,3 @@ FIGURES = {
 }
 
 
-if __name__ == "__main__":
-    out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "docs", "assets")
-    for name, fn in FIGURES.items():
-        with open(os.path.join(out, name), "w", encoding="utf-8") as f:
-            f.write(fn())
-        print("wrote", name)

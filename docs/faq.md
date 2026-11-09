@@ -44,7 +44,7 @@ On Qwen2.5 0.5B with the same Q8_0 and Q4_0 formats on the same machines
   with AMX, llama.cpp's AMX kernels prefill 1.03–1.17× faster than Krafla's
   AVX-512 VNNI build.
 - **Quality:** Krafla's Q8_0 scores perplexity 13.32–13.35 against 13.34 for
-  llama.cpp's F16. Its Q4_0 fits each block's scale rather than rounding it
+  llama.cpp's F16. Its Q4_0 fits each block's scale (except for Gemma 3) rather than rounding it
   from the block's maximum. Against llama.cpp's Q4_0 on the same tensors:
   - Without an importance matrix, the KL divergence from the unquantized
     model is 6–9% lower on four Qwen models and 1.5–5.6% lower on six of
@@ -100,6 +100,9 @@ slowest and starts the first one your CPU supports. When you build from
 source, `make ISA=...` picks one (see [Choosing the ISA](user-guide.md#choosing-the-isa)).
 A binary run on a CPU that lacks its ISA exits with code 3 and names the
 missing feature instead of crashing.
+
+The [user guide](user-guide.md#prebuilt-binaries) shows that order with the
+CPUs that stop at each build.
 
 ## How much memory does a model need?
 
