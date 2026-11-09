@@ -9,7 +9,8 @@
                        weighted as llama.cpp does without an importance matrix,
                        or llama.cpp's Q4_0 rounding; the default (AUTO_Q4_RULE)
                        takes round for Gemma 3 (its QAT checkpoints expect it),
-                       flat for model_type llama and the fit for the others
+                       flat for HF model_type llama and the fit for the others
+                       (llama2c checkpoints too: flat was not measured on them)
 """
 import argparse
 import glob

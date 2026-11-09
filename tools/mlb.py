@@ -409,10 +409,13 @@ def write_mlb(path, cfg, w, wtype, q8=(), imatrix=None, scales="f32", q4_rule="f
     imatrix: read_imatrix's result, weighting the Q4 fits.
     scales: "f32" or "f16", the storage of every matrix's block scales.
     q4_rule: "fit", "flat" or "round" (quantize_q4). With "flat", the embedding
-    and the classifier are fitted as with "fit": they meet no activations to
-    weight by (llama-imatrix collects neither, so llama.cpp fits them so too)."""
+    and the classifier keep the x² fit: flat is llama.cpp's weighting with every
+    channel equally important, and llama-imatrix records no importance for these
+    two (docs/q4-scales.md measures the rule that way)."""
     if scales not in ("f32", "f16"):
         raise ValueError(f"scales must be f32 or f16, not {scales!r}")
+    if q4_rule not in ("fit", "flat", "round"):     # before the file is created
+        raise ValueError(f"Q4 rule must be fit, flat or round, not {q4_rule!r}")
     if imatrix and q4_rule != "fit":
         raise ValueError("an importance matrix weights the fit rule only")
     f16 = scales == "f16"

@@ -21,9 +21,6 @@ jobs:
       - name: Release version check
         # a new ML_VERSION needs its CHANGELOG.md section (auto-release.yml)
         run: scripts/release_check.sh
-      - name: Generated docs check
-        # docs/assets/decode-ratio.svg follows docs/benchmarks.md (scripts/sync_docs.py)
-        run: python3 scripts/sync_docs.py --check
       - name: Cache apt packages
         uses: actions/cache@v5
         with:
@@ -39,6 +36,10 @@ jobs:
           .github/scripts/apt-install.sh \
             qemu-user gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf libc6-dev-armhf-cross libc6-dev-arm64-cross \
             gcc-mingw-w64-x86-64 python3-numpy python3-pytest
+      - name: Generated docs check
+        # the charts, figures and changelog page of docs/ follow their sources
+        # (scripts/sync_docs.py); after the toolchains, which bring numpy
+        run: python3 scripts/sync_docs.py --check
       - name: Install the tokenizers library (reference for the tokenizer checks)
         run: pip install --user --break-system-packages tokenizers || echo "tokenizers unavailable, those rows will SKIP"
       - name: Host CPU features

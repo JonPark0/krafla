@@ -20,7 +20,8 @@ i8mm and SVE.
   ARMv7 NEON boards, with no GPU or external libraries required; static
   binaries for each ISA.
 - **Q4 quality:** each Q4_0 block's scale is fitted rather than rounded from
-  the block's maximum, with the error weighting chosen per architecture.
+  the block's maximum (except for Gemma 3, which keeps llama.cpp's rounding),
+  with the error weighting chosen per architecture.
   Against llama.cpp's Q4_0 on the same tensors, the KL divergence from the
   unquantized model is 6–9% lower on four Qwen models and 1.5–5.6% lower on
   six of seven Llama-architecture models ([Q4_0 block scales](docs/q4-scales.md)). Q8

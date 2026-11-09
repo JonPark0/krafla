@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 474" width="760" height="474" role="img" aria-labelledby="ly-title ly-desc" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<title id="ly-title">One token through a Llama-style layer, by matrix class</title>
+<desc id="ly-desc">Embedding row (class emb) to the residual stream x. Attention: RMSNorm, quantize to Q8, Wq and Wk (class qk) and Wv (class v), RoPE, attention over the KV cache, quantize, Wo (class o), added to x. Feed-forward: RMSNorm, quantize, W1 and W3 (class up), SiLU and multiply, quantize, W2 (class down), added to x. After the last layer: RMSNorm, quantize, Wcls (class cls) to the logits. v, o and down are the classes kept in Q8 by --q8 v,o,down.</desc>
+<style>
+.bg{fill:#fff;stroke:#e5e7eb}.t{fill:#1f2937}.m{fill:#6b7280}.g{stroke:#eceef1}.ax{stroke:#9ca3af}.s1{fill:#2a78d6}.s2{fill:#eb6834}.s3{fill:#1baf7a}.s4{fill:#eda100}.k1{stroke:#2a78d6}.k2{stroke:#eb6834}.k3{stroke:#1baf7a}.k4{stroke:#eda100}.sx{fill:#9ca3af}.k0{stroke:#c9ccd1}.f1{fill:#e4eefb}.f2{fill:#fde9e0}.f3{fill:#dcf4ea}.f4{fill:#fdf1d6}.f0{fill:#f3f4f6}.lb{fill:#fff}.ring{stroke:#fff}.cn{stroke:#c9ccd1}.ln{stroke:#9ca3af;fill:none}.box{fill:#fff;stroke:#c9ccd1}.on{fill:#fff}.ondk{fill:#1f2937}.ah{fill:#9ca3af}.h{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}.r0{fill:#184f95}.r1{fill:#256abf}.r2{fill:#3987e5}.r3{fill:#6da7ec}.r4{fill:#9ec5f4}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+@media (prefers-color-scheme:dark){.bg{fill:#1f2023;stroke:#3a3b40}.t{fill:#e5e7eb}.m{fill:#9ca3af}.g{stroke:#2e3035}.ax{stroke:#6b7280}.s1{fill:#3987e5}.s2{fill:#d95926}.sx{fill:#6b7280}.k0{stroke:#4b4f57}.s3{fill:#199e70}.s4{fill:#c98500}.k1{stroke:#3987e5}.k2{stroke:#d95926}.k3{stroke:#199e70}.k4{stroke:#c98500}.f1{fill:#1d2d45}.f2{fill:#3b2519}.f3{fill:#16362b}.f4{fill:#382d12}.f0{fill:#2a2c31}.lb{fill:#1f2023}.ring{stroke:#1f2023}.cn{stroke:#4b4f57}.ln{stroke:#6b7280}.box{fill:#1f2023;stroke:#4b4f57}.ah{fill:#6b7280}.h{stroke:#1f2023}.r0{fill:#b7d3f6}.r1{fill:#86b6ef}.r2{fill:#5598e7}.r3{fill:#2a78d6}.r4{fill:#1c5cab}}
+</style>
+<defs><marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0L8,4L0,8z"/></marker></defs>
+<rect class="bg" x="0.5" y="0.5" width="759" height="473" rx="8"/>
+<text class="t" x="20" y="32" font-size="17" font-weight="600">One token through a Llama-style layer, by matrix class</text>
+<text class="m" x="20" y="54" font-size="13">Each matrix product is an integer matvec on Q8 activations; tags are the --q8 class names</text>
+<rect class="f1 k1" x="558.8" y="68" width="12" height="12" rx="3"/>
+<text class="t" x="575.8" y="79" font-size="13">kept by --q8 v,o,down</text>
+<rect class="f0 k0" x="391.99999999999994" y="68" width="12" height="12" rx="3"/>
+<text class="t" x="408.99999999999994" y="79" font-size="13">matrix · --q8 class</text>
+<rect class="f0 cn" x="44.0" y="88.0" width="150.0" height="28.0" rx="6" stroke-width="1.2"/>
+<text class="t" x="52.0" y="106.0" font-size="11" font-weight="600">tok_emb</text>
+<text class="m" x="186.0" y="106.0" font-size="11" text-anchor="end" font-style="italic">emb</text>
+<text class="m" x="204.0" y="106.0" font-size="11">a row lookup: the token's row becomes the residual stream x</text>
+<line class="ln" x1="60.0" y1="116.0" x2="60.0" y2="148.0" stroke-width="1.5" marker-end="url(#ah)"/>
+<line class="ax" x1="44.0" y1="150.0" x2="692.0" y2="150.0" stroke-width="1.5"/>
+<line class="ln" x1="70.0" y1="150.0" x2="70.0" y2="211.0" stroke-width="1.2"/>
+<text class="m" x="80.0" y="170.0" font-size="12" font-weight="600">Attention</text>
+<rect class="box" x="70.0" y="196.0" width="64.0" height="30.0" rx="6" stroke-width="1"/>
+<text class="t" x="102.0" y="215.0" font-size="11" text-anchor="middle">RMSNorm</text>
+<line class="ln" x1="135.0" y1="211.0" x2="145.0" y2="211.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<rect class="box" x="148.0" y="196.0" width="58.0" height="30.0" rx="6" stroke-width="1"/>
+<text class="t" x="177.0" y="215.0" font-size="11" text-anchor="middle">quantize</text>
+<line class="ln" x1="207.0" y1="211.0" x2="217.0" y2="211.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<rect class="f0 cn" x="220.0" y="177.0" width="94.0" height="30.0" rx="6" stroke-width="1.2"/>
+<text class="t" x="228.0" y="196.0" font-size="11" font-weight="600">Wq, Wk</text>
+<text class="m" x="306.0" y="196.0" font-size="11" text-anchor="end" font-style="italic">qk</text>
+<rect class="f1 k1" x="220.0" y="215.0" width="94.0" height="30.0" rx="6" stroke-width="1.2"/>
+<text class="t" x="228.0" y="234.0" font-size="11" font-weight="600">Wv</text>
+<text class="m" x="306.0" y="234.0" font-size="11" text-anchor="end" font-style="italic">v</text>
+<line class="ln" x1="214.0" y1="192.0" x2="214.0" y2="230.0" stroke-width="1.2"/>
+<line class="ln" x1="315.0" y1="211.0" x2="325.0" y2="211.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<rect class="box" x="328.0" y="196.0" width="70.0" height="30.0" rx="6" stroke-width="1"/>
+<text class="t" x="363.0" y="215.0" font-size="11" text-anchor="middle">RoPE (q, k)</text>
+<line class="ln" x1="399.0" y1="211.0" x2="409.0" y2="211.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<rect class="box" x="412.0" y="196.0" width="114.0" height="30.0" rx="6" stroke-width="1"/>
+<text class="t" x="469.0" y="215.0" font-size="11" text-anchor="middle">attention · KV cache</text>
+<line class="ln" x1="527.0" y1="211.0" x2="537.0" y2="211.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<rect class="box" x="540.0" y="196.0" width="58.0" height="30.0" rx="6" stroke-width="1"/>
+<text class="t" x="569.0" y="215.0" font-size="11" text-anchor="middle">quantize</text>
+<line class="ln" x1="599.0" y1="211.0" x2="609.0" y2="211.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<rect class="f1 k1" x="612.0" y="196.0" width="70.0" height="30.0" rx="6" stroke-width="1.2"/>
+<text class="t" x="620.0" y="215.0" font-size="11" font-weight="600">Wo</text>
+<text class="m" x="674.0" y="215.0" font-size="11" text-anchor="end" font-style="italic">o</text>
+<line class="ln" x1="682.0" y1="211.0" x2="700.0" y2="211.0" stroke-width="1.2"/>
+<line class="ln" x1="700.0" y1="211.0" x2="700.0" y2="159.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<circle class="box" cx="700" cy="150" r="8" stroke-width="1.2"/>
+<text class="t" x="700.0" y="154.0" font-size="13" text-anchor="middle" font-weight="600">+</text>
+<path class="ln" d="M708,150H724V260H60V270" stroke-width="1.5" marker-end="url(#ah)"/>
+<text class="m" x="718.0" y="144.0" font-size="12" text-anchor="end">x</text>
+<line class="ax" x1="44.0" y1="272.0" x2="692.0" y2="272.0" stroke-width="1.5"/>
+<line class="ln" x1="70.0" y1="272.0" x2="70.0" y2="333.0" stroke-width="1.2"/>
+<text class="m" x="80.0" y="292.0" font-size="12" font-weight="600">Feed-forward</text>
+<rect class="box" x="70.0" y="318.0" width="64.0" height="30.0" rx="6" stroke-width="1"/>
+<text class="t" x="102.0" y="337.0" font-size="11" text-anchor="middle">RMSNorm</text>
+<line class="ln" x1="135.0" y1="333.0" x2="145.0" y2="333.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<rect class="box" x="148.0" y="318.0" width="58.0" height="30.0" rx="6" stroke-width="1"/>
+<text class="t" x="177.0" y="337.0" font-size="11" text-anchor="middle">quantize</text>
+<line class="ln" x1="207.0" y1="333.0" x2="217.0" y2="333.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<rect class="f0 cn" x="220.0" y="299.0" width="100.0" height="30.0" rx="6" stroke-width="1.2"/>
+<text class="t" x="228.0" y="318.0" font-size="11" font-weight="600">W1</text>
+<text class="m" x="312.0" y="318.0" font-size="11" text-anchor="end" font-style="italic">up</text>
+<rect class="f0 cn" x="220.0" y="337.0" width="100.0" height="30.0" rx="6" stroke-width="1.2"/>
+<text class="t" x="228.0" y="356.0" font-size="11" font-weight="600">W3</text>
+<text class="m" x="312.0" y="356.0" font-size="11" text-anchor="end" font-style="italic">up</text>
+<line class="ln" x1="214.0" y1="314.0" x2="214.0" y2="352.0" stroke-width="1.2"/>
+<line class="ln" x1="321.0" y1="333.0" x2="331.0" y2="333.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<rect class="box" x="334.0" y="318.0" width="92.0" height="30.0" rx="6" stroke-width="1"/>
+<text class="t" x="380.0" y="337.0" font-size="11" text-anchor="middle">SiLU(W1)·W3</text>
+<line class="ln" x1="427.0" y1="333.0" x2="437.0" y2="333.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<rect class="box" x="440.0" y="318.0" width="58.0" height="30.0" rx="6" stroke-width="1"/>
+<text class="t" x="469.0" y="337.0" font-size="11" text-anchor="middle">quantize</text>
+<line class="ln" x1="499.0" y1="333.0" x2="509.0" y2="333.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<rect class="f1 k1" x="512.0" y="318.0" width="76.0" height="30.0" rx="6" stroke-width="1.2"/>
+<text class="t" x="520.0" y="337.0" font-size="11" font-weight="600">W2</text>
+<text class="m" x="580.0" y="337.0" font-size="11" text-anchor="end" font-style="italic">down</text>
+<line class="ln" x1="588.0" y1="333.0" x2="700.0" y2="333.0" stroke-width="1.2"/>
+<line class="ln" x1="700.0" y1="333.0" x2="700.0" y2="281.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<circle class="box" cx="700" cy="272" r="8" stroke-width="1.2"/>
+<text class="t" x="700.0" y="276.0" font-size="13" text-anchor="middle" font-weight="600">+</text>
+<path class="ln" d="M24,144v228" stroke-width="1"/>
+<text class="m" x="14.0" y="258.0" font-size="11" text-anchor="middle" transform="rotate(-90 14 258)">× n_layers</text>
+<path class="ln" d="M708,272H724V388H60V398" stroke-width="1.5" marker-end="url(#ah)"/>
+<text class="m" x="718.0" y="266.0" font-size="12" text-anchor="end">x</text>
+<rect class="box" x="44.0" y="400.0" width="64.0" height="30.0" rx="6" stroke-width="1"/>
+<text class="t" x="76.0" y="419.0" font-size="11" text-anchor="middle">RMSNorm</text>
+<line class="ln" x1="109.0" y1="415.0" x2="119.0" y2="415.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<rect class="box" x="122.0" y="400.0" width="58.0" height="30.0" rx="6" stroke-width="1"/>
+<text class="t" x="151.0" y="419.0" font-size="11" text-anchor="middle">quantize</text>
+<line class="ln" x1="181.0" y1="415.0" x2="191.0" y2="415.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<rect class="f0 cn" x="194.0" y="400.0" width="90.0" height="30.0" rx="6" stroke-width="1.2"/>
+<text class="t" x="202.0" y="419.0" font-size="11" font-weight="600">Wcls</text>
+<text class="m" x="276.0" y="419.0" font-size="11" text-anchor="end" font-style="italic">cls</text>
+<line class="ln" x1="285.0" y1="415.0" x2="295.0" y2="415.0" stroke-width="1.2" marker-end="url(#ah)"/>
+<text class="t" x="302.0" y="419.0" font-size="12" font-weight="600">logits</text>
+<text class="m" x="20.0" y="458.0" font-size="11">quantize: activations to Q8_0. A matvec multiplies them by int8 or 4-bit weights, sums each 32-weight block in int32, scales it by d_w · d_x.</text>
+</svg>

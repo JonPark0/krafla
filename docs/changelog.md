@@ -38,6 +38,20 @@ nav_title: "Changelog"
   channel is equally important. The embedding and classifier keep the `x²`
   fit.
 
+- Five diagrams of concepts the docs explain, drawn by `scripts/docfigs.py`
+  from the code's own facts and checked in CI with the charts:
+  - one Q4_0 block's bytes (file format);
+  - the error of one block at each scale, rounding against the fit (Q4_0
+    block scales);
+  - weight packing, row-major against G rows interleaved (architecture);
+  - one token through a layer, with each matrix's `--q8` class
+    (architecture, user guide);
+  - which build the release's wrappers start, fastest first, with the CPUs
+    that stop at each (user guide; linked from the FAQ).
+
+  `tests/test_docs.py` checks that every chart and figure renders, and that
+  the scale figure's candidates are the ones `tools/mlb.py` chooses among.
+
 ### Changed
 
 - Q4 conversion of Llama-architecture checkpoints (`model_type` `llama`:
@@ -48,6 +62,20 @@ nav_title: "Changelog"
   worse than llama.cpp's Q4_0 to 3% better on them. Other architectures keep
   their rules. Q4 files converted earlier still load; convert again for the
   new scales.
+- `tools/convert.py llama2c` keeps the fit for Q4 (`flat` was measured on
+  Hugging Face models only), and `mlb.write_mlb` checks the rule name before
+  it creates the file.
+- The user guide no longer lists A64FX for the `sve` build: that build also
+  needs dotprod, which A64FX lacks, so A64FX runs `neon`.
+- The Q4_0 block scales page states its claims more exactly: the defaults
+  beat llama.cpp's Q4_0 on ten of twelve models (Gemma 3 gives the same
+  bytes, TinyLlama v1.1 is 3.5% further), the paired standard errors of
+  `flat`'s gains, 8,160 scored tokens, and that the default by `model_type` is
+  a cautious reading of the measurements, with `scripts/compare_q4.sh` for
+  other models. The README, home page, FAQ and Korean page note that Gemma 3
+  keeps llama.cpp's rounding.
+- CI checks the generated docs files after numpy is installed, as the
+  figures quantize with `tools/mlb.py`.
 - `--q4-rule round` writes `d` = -0 for a block of zeros, as llama.cpp does,
   so that its bytes equal `llama-quantize`'s in every block (TinyLlama's
   embedding has such blocks). The values are unchanged.
