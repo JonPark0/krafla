@@ -8,10 +8,14 @@ nav_title: "Changelog"
 
 # Changelog
 
-## Unreleased
+## 0.10.0 — 2026-11-10
 
 ### Added
 
+- `tools/convert.py --q4-rule flat`: the Q4 fit with the error weighted by
+  `sqrt(s2 + x²)`, as llama.cpp weights its importance search when every
+  channel is equally important. The embedding and classifier keep the `x²`
+  fit.
 - [Q4_0 block scales](https://github.com/JonPark0/krafla/blob/main/docs/q4-scales.md),
   a page of the docs site, compares Krafla's fitted Q4_0 scales with
   llama.cpp's Q4_0 on twelve models from 135M to 3B. All variants have the
@@ -33,10 +37,6 @@ nav_title: "Changelog"
 
   The decode chart takes the same colors, checked for color-vision
   deficiency and contrast in light and dark mode.
-- `tools/convert.py --q4-rule flat`: the Q4 fit with the error weighted by
-  `sqrt(s2 + x²)`, as llama.cpp weights its importance search when every
-  channel is equally important. The embedding and classifier keep the `x²`
-  fit.
 
 - Five diagrams of concepts the docs explain, drawn by `scripts/docfigs.py`
   from the code's own facts and checked in CI with the charts:
@@ -61,7 +61,8 @@ nav_title: "Changelog"
   llama.cpp's Q4_0 on six, by 1.5–5.6% in KL divergence. The `x²` fit was 10%
   worse than llama.cpp's Q4_0 to 3% better on them. Other architectures keep
   their rules. Q4 files converted earlier still load; convert again for the
-  new scales.
+  new scales. The user guide's Llama 3.2 1B and SmolLM2 135M Q4 numbers are
+  measured again with the new default.
 - `tools/convert.py llama2c` keeps the fit for Q4 (`flat` was measured on
   Hugging Face models only), and `mlb.write_mlb` checks the rule name before
   it creates the file.
