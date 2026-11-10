@@ -133,7 +133,7 @@ every option; the [FAQ](faq.md) answers the common questions.
   author  = {Park, Yeochoon},
   title   = {Krafla: a portable C11 runtime for INT8/INT4 Llama-style language model inference on legacy x86-64 and ARM instruction sets},
   year    = {2026},
-  version = {0.9.1},
+  version = {0.10.0},
   doi     = {10.5281/zenodo.23880653},
   url     = {https://github.com/JonPark0/krafla}
 }
